@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SevaLKSplash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+         <item name="windowSplashScreenAnimatedIcon">@drawable/sewa_old</item>
+        <item name="postSplashScreenTheme">@style/Theme.SevaLK</item>
+    </style>
+
+    <style name="Theme.SevaLK" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
