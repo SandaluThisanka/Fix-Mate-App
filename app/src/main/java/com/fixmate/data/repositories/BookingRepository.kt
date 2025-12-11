@@ -234,7 +234,9 @@ class BookingRepositoryImpl @Inject constructor(
                 .await()
             
             if (document.exists()) {
-                Result.success(document.data)
+                val data = document.data
+                val providerProfile = data?.get("providerProfile") as? Map<String, Any>
+                Result.success(providerProfile)
             } else {
                 Result.success(null)
             }

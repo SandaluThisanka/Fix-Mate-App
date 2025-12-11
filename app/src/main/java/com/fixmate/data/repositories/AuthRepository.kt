@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.fixmate.data.models.ProviderStatus
 import com.fixmate.data.models.Service
 import com.fixmate.data.models.ServiceLocation
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
+import java.util.Locale
 import java.util.Properties
 import javax.inject.Inject
 import javax.mail.Authenticator
@@ -101,6 +103,8 @@ class AuthRepositoryImpl @Inject constructor(
         verificationCodes[email] = code
         
         try {
+            // Send verification email with OTP
+            Timber.d("Sending verification code to $email: $code")
             sendVerificationEmail(email, fullName, code)
             return code
         } catch (e: Exception) {
@@ -114,6 +118,7 @@ class AuthRepositoryImpl @Inject constructor(
         return if (storedCode == code) {
             true
         } else {
+            Timber.w("Code verification failed. Expected: $storedCode, Got: $code")
             false
         }
     }
@@ -189,13 +194,13 @@ class AuthRepositoryImpl @Inject constructor(
             val userData = User.toMap(user)
             val serviceProviderData = ServiceProvider.toMap(serviceProvider)
             
-            // Save User to customers collection
+            // Save User to users collection
             firestore.collection(Constants.COLLECTION_USERS)
                 .document(userId)
                 .set(userData)
                 .await()
             
-            // Save ServiceProvider to service providers collection
+            // Save ServiceProvider to service_providers collection
             firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
                 .document(userId)
                 .set(serviceProviderData)
@@ -277,13 +282,13 @@ class AuthRepositoryImpl @Inject constructor(
             val userData = User.toMap(user)
             val serviceProviderData = ServiceProvider.toMap(serviceProvider)
             
-            // Save User to customers collection
+            // Save User to users collection
             firestore.collection(Constants.COLLECTION_USERS)
                 .document(userId)
                 .set(userData)
                 .await()
             
-            // Save ServiceProvider to service providers collection
+            // Save ServiceProvider to service_providers collection
             firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
                 .document(userId)
                 .set(serviceProviderData)
@@ -373,24 +378,23 @@ class AuthRepositoryImpl @Inject constructor(
         services: List<Service>
     ): Result<Unit> {
         return try {
-            val serviceProviderRef = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+            val userRef = firestore.collection(Constants.COLLECTION_USERS)
                 .document(providerId)
-            
-            // Check if service provider document exists
-            val document = serviceProviderRef.get().await()
-            
+
+            val document = userRef.get().await()
+
             if (document.exists()) {
-                // Update existing service provider with services and business name
                 val updates = mapOf(
-                    "services" to services.map { Service.toMap(it) },
+                    "providerProfile.services" to services.map { Service.toMap(it) },
+                    "providerProfile.updatedAt" to System.currentTimeMillis(),
                     "updatedAt" to System.currentTimeMillis()
                 )
-                
-                serviceProviderRef.update(updates).await()
-                Timber.d("Service provider services updated successfully for provider: $providerId")
+
+                userRef.update(updates).await()
+                Timber.d("Provider services updated successfully for provider: $providerId")
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Service provider not found"))
+                Result.failure(Exception("Provider profile not found"))
             }
         } catch (e: Exception) {
             Timber.e(e, "Failed to update service provider services")
@@ -404,28 +408,26 @@ class AuthRepositoryImpl @Inject constructor(
         serviceRadius: Double
     ): Result<Unit> {
         return try {
-            val serviceProviderRef = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+            val userRef = firestore.collection(Constants.COLLECTION_USERS)
                 .document(providerId)
             
-            // Check if service provider document exists
-            val document = serviceProviderRef.get().await()
+            val document = userRef.get().await()
 
-            // Ensure service radius to whole number
             val intRadius = serviceRadius.toInt()
             
             if (document.exists()) {
-                // Update existing service provider with location and radius
                 val updates = mapOf(
-                    "serviceLocation" to ServiceLocation.toMap(serviceLocation),
-                    "serviceRadius" to intRadius,
+                    "providerProfile.serviceLocation" to ServiceLocation.toMap(serviceLocation),
+                    "providerProfile.serviceRadius" to intRadius,
+                    "providerProfile.updatedAt" to System.currentTimeMillis(),
                     "updatedAt" to System.currentTimeMillis()
                 )
                 
-                serviceProviderRef.update(updates).await()
-                Timber.d("Service provider location updated successfully for provider: $providerId")
+                userRef.update(updates).await()
+                Timber.d("Provider location updated successfully for provider: $providerId")
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Service provider not found"))
+                Result.failure(Exception("Provider profile not found"))
             }
         } catch (e: Exception) {
             Timber.e(e, "Failed to update service provider location")
@@ -435,14 +437,15 @@ class AuthRepositoryImpl @Inject constructor(
     
     override suspend fun getServiceProviderServices(providerId: String): Result<List<Service>> {
         return try {
-            val document = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+            val document = firestore.collection(Constants.COLLECTION_USERS)
                 .document(providerId)
                 .get()
                 .await()
             
             if (document.exists()) {
                 val data = document.data
-                val servicesData = data?.get("services") as? List<Map<String, Any>> ?: emptyList()
+                val providerProfile = data?.get("providerProfile") as? Map<String, Any?>
+                val servicesData = providerProfile?.get("services") as? List<Map<String, Any?>> ?: emptyList()
                 
                 val services = servicesData.mapNotNull { serviceData ->
                     Service.fromMap(serviceData)
@@ -451,7 +454,7 @@ class AuthRepositoryImpl @Inject constructor(
                 Timber.d("Retrieved ${services.size} services for provider: $providerId")
                 Result.success(services)
             } else {
-                Timber.w("Service provider not found: $providerId")
+                Timber.w("Provider profile not found: $providerId")
                 Result.success(emptyList())
             }
         } catch (e: Exception) {
@@ -462,13 +465,15 @@ class AuthRepositoryImpl @Inject constructor(
     
     override suspend fun checkServiceProviderExists(userId: String): Result<Boolean> {
         return try {
-            val document = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+            val document = firestore.collection(Constants.COLLECTION_USERS)
                 .document(userId)
                 .get()
                 .await()
             
-            val exists = document.exists()
-            Timber.d("Service provider exists for user $userId: $exists")
+            val exists = document.exists() &&
+                isProviderUserType(document.getString("userType")) &&
+                document.data?.containsKey("providerProfile") == true
+            Timber.d("Provider profile exists for user $userId: $exists")
             Result.success(exists)
         } catch (e: Exception) {
             Timber.e(e, "Failed to check if service provider exists")
@@ -505,14 +510,22 @@ class AuthRepositoryImpl @Inject constructor(
             
             // Convert ServiceProvider object to Map using companion function
             val serviceProviderData = ServiceProvider.toMap(serviceProvider)
-            
-            // Save ServiceProvider to service providers collection
-            firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+
+            val userRef = firestore.collection(Constants.COLLECTION_USERS)
                 .document(userId)
-                .set(serviceProviderData)
+
+            userRef
+                .set(
+                    mapOf(
+                        "providerProfile" to serviceProviderData,
+                        "userType" to Constants.USER_TYPE_PROVIDER,
+                        "updatedAt" to System.currentTimeMillis()
+                    ),
+                    SetOptions.merge()
+                )
                 .await()
             
-            Timber.d("Service provider account created for user: $userId")
+            Timber.d("Provider profile created for user: $userId")
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to create service provider from customer")
@@ -520,6 +533,12 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
     
+    private fun isProviderUserType(userType: String?): Boolean {
+        val normalized = userType?.lowercase(Locale.US)
+        return normalized == Constants.USER_TYPE_PROVIDER ||
+            normalized == UserType.SERVICE_PROVIDER.name.lowercase(Locale.US)
+    }
+
     private fun generateVerificationCode(): String {
         return Random.nextInt(100000, 999999).toString()
     }
@@ -537,9 +556,9 @@ class AuthRepositoryImpl @Inject constructor(
                     props.put("mail.smtp.host", "smtp.gmail.com")
                     props.put("mail.smtp.port", "587")
                     
-                    // Replace with your email and app password
-                    val emailSender = "adoptawallet.devnet@gmail.com"  // TODO: Replace with your Gmail
-                    val emailPassword = "nozr nzud dlpn gncs"   // TODO: Replace with your app password
+                    // Email configuration
+                    val emailSender = "abeysundarahettigesandalu@gmail.com"
+                    val emailPassword = "lyyqoswpzjgzwvew"  // App password without spaces
                     
                     val session = Session.getInstance(props, object : Authenticator() {
                         override fun getPasswordAuthentication(): PasswordAuthentication {
@@ -550,18 +569,18 @@ class AuthRepositoryImpl @Inject constructor(
                     val message = MimeMessage(session)
                     message.setFrom(InternetAddress(emailSender))
                     message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
-                    message.subject = "SevaLK - Email Verification"
+                    message.subject = "FixMate - Email Verification"
                         
                         val emailContent = """
                             <html>
                             <body style="font-family: Arial, sans-serif; padding: 20px;">
-                                <h2>Welcome to SevaLK!</h2>
+                                <h2>Welcome to FixMate!</h2>
                                 <p>Hello $name,</p>
-                                <p>Thank you for registering with SevaLK. Please use the verification code below to complete your registration:</p>
+                                <p>Thank you for registering with FixMate. Please use the verification code below to complete your registration:</p>
                                 <h3 style="background-color: #f2f2f2; padding: 10px; text-align: center; font-size: 24px;">$code</h3>
                                 <p>This code will expire in 10 minutes.</p>
                                 <p>If you didn't request this code, please ignore this email.</p>
-                                <p>Best regards,<br>The SevaLK Team</p>
+                                <p>Best regards,<br>The FixMate Team</p>
                             </body>
                             </html>
                         """.trimIndent()

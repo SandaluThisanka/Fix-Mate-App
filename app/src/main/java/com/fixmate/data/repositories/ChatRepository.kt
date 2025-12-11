@@ -4,12 +4,14 @@ import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import com.google.firebase.firestore.FirebaseFirestore
+import com.fixmate.data.models.UserType
 import com.fixmate.utils.Constants
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -99,7 +101,7 @@ class ChatRepositoryImpl @Inject constructor(
                 .document(userId)
                 .get()
                 .await()
-            document.getString("userType")
+            normalizeUserType(document.getString("userType"))
         } catch (e: Exception) {
             Timber.e(e, "Failed to get current user type")
             null
@@ -259,7 +261,7 @@ class ChatRepositoryImpl @Inject constructor(
                 .get()
                 .await()
             val recipientName = recipientDoc.getString("displayName") ?: "Unknown User"
-            val recipientType = recipientDoc.getString("userType") ?: "customer"
+            val recipientType = normalizeUserType(recipientDoc.getString("userType"))
 
             val messageId = messagesRef.child(chatId).push().key ?: return Result.failure(Exception("Failed to generate message ID"))
             val timestamp = System.currentTimeMillis()
@@ -325,7 +327,7 @@ class ChatRepositoryImpl @Inject constructor(
                 .await()
 
             val recipientName = recipientDoc.getString("displayName") ?: "Unknown User"
-            val recipientType = recipientDoc.getString("userType") ?: "customer"
+            val recipientType = normalizeUserType(recipientDoc.getString("userType"))
 
             val messageId = messagesRef.child(chatId).push().key ?: return Result.failure(Exception("Failed to generate message ID"))
             val timestamp = System.currentTimeMillis()
@@ -446,5 +448,15 @@ class ChatRepositoryImpl @Inject constructor(
         // Create a consistent chat ID by sorting user IDs
         val sortedIds = listOf(currentUserId, participantId).sorted()
         return "chat_${sortedIds[0]}_${sortedIds[1]}"
+    }
+
+    private fun normalizeUserType(userType: String?): String {
+        val normalized = userType?.lowercase(Locale.US)
+        val providerToken = UserType.SERVICE_PROVIDER.name.lowercase(Locale.US)
+        return if (normalized == Constants.USER_TYPE_PROVIDER || normalized == providerToken) {
+            Constants.USER_TYPE_PROVIDER
+        } else {
+            Constants.USER_TYPE_CUSTOMER
+        }
     }
 }

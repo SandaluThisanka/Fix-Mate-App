@@ -287,7 +287,7 @@ fun Step2VerifyEmail(
     
     Column {
         Text(
-            text = "We've sent a verification code to ${uiState.email}. Please check your inbox (and spam folder) and click the verification link or enter the code below.",
+            text = "We've sent a verification code to ${uiState.email}. Please check your inbox (and spam folder) and enter the code below.",
             textAlign = TextAlign.Justify,
             color = Color.Black
         )

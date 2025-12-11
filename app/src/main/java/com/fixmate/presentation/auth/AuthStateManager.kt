@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
+import com.fixmate.data.models.UserType
 import com.fixmate.utils.Constants
 import com.fixmate.utils.FCMTokenManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -117,7 +119,7 @@ class AuthStateManager @Inject constructor(
             .addOnSuccessListener { document ->
                 if (document.exists()) {
                     val userType = document.getString("userType")
-                    isProviderMode = userType == Constants.USER_TYPE_PROVIDER
+                    isProviderMode = isProviderUserType(userType)
                     Timber.d("User type determined: $userType")
                 } else {
                     // User document doesn't exist, might be a new user
@@ -150,7 +152,7 @@ class AuthStateManager @Inject constructor(
             
             if (document.exists()) {
                 val userType = document.getString("userType")
-                isProviderMode = userType == Constants.USER_TYPE_PROVIDER
+                isProviderMode = isProviderUserType(userType)
                 Timber.d("User type determined: $userType")
                 isProviderMode
             } else {
@@ -163,6 +165,12 @@ class AuthStateManager @Inject constructor(
             isProviderMode = false
             false
         }
+    }
+
+    private fun isProviderUserType(userType: String?): Boolean {
+        val normalized = userType?.lowercase(Locale.US)
+        return normalized == Constants.USER_TYPE_PROVIDER ||
+            normalized == UserType.SERVICE_PROVIDER.name.lowercase(Locale.US)
     }
 
     fun markOnboardingCompleted() {

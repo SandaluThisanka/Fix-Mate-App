@@ -129,90 +129,20 @@ class JobsViewModel @Inject constructor(
                     },
                     onFailure = { exception ->
                         Timber.e(exception, "Failed to load bookings")
-                        // For now, show some sample data when there's an error
-                        loadSampleData()
+                        _state.value = _state.value.copy(
+                            bookings = emptyList(),
+                            isLoading = false
+                        )
                     }
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Error loading bookings")
-                // For now, show some sample data when there's an error
-                loadSampleData()
+                _state.value = _state.value.copy(
+                    bookings = emptyList(),
+                    isLoading = false
+                )
             }
         }
-    }
-    
-    private fun loadSampleData() {
-        // Sample data for testing - remove this in production
-        val sampleBookings = listOf(
-            Booking(
-                id = "sample_1",
-                customerName = "Sarah Johnson",
-                serviceName = "Kitchen Plumbing Repair",
-                description = "Kitchen sink is leaking from the pipes underneath. Need urgent repair.",
-                scheduledDate = System.currentTimeMillis() + (24 * 60 * 60 * 1000), // Tomorrow
-                scheduledTime = "10:00 AM",
-                status = BookingStatus.PENDING,
-                createdAt = System.currentTimeMillis() - (2 * 60 * 60 * 1000), // 2 hours ago
-                pricing = com.fixmate.data.models.BookingPricing(
-                    basePrice = 2500.0,
-                    totalAmount = 2500.0
-                )
-            ),
-            Booking(
-                id = "sample_2",
-                customerName = "Mike Chen",
-                serviceName = "Bathroom Pipe Installation",
-                description = "New bathroom renovation - need pipes connected for shower and sink.",
-                scheduledDate = System.currentTimeMillis() + (48 * 60 * 60 * 1000), // Day after tomorrow
-                scheduledTime = "11:00 AM",
-                status = BookingStatus.ACCEPTED,
-                createdAt = System.currentTimeMillis() - (3 * 60 * 60 * 1000), // 3 hours ago
-                pricing = com.fixmate.data.models.BookingPricing(
-                    basePrice = 4500.0,
-                    totalAmount = 4500.0
-                )
-            ),
-            Booking(
-                id = "sample_3",
-                customerName = "Lisa Wong",
-                serviceName = "Garden Cleaning",
-                description = "Monthly garden maintenance and cleaning service required.",
-                scheduledDate = System.currentTimeMillis() - (24 * 60 * 60 * 1000), // Yesterday
-                scheduledTime = "9:00 AM",
-                status = BookingStatus.COMPLETED,
-                createdAt = System.currentTimeMillis() - (5 * 24 * 60 * 60 * 1000), // 5 days ago
-                completedAt = System.currentTimeMillis() - (23 * 60 * 60 * 1000), // Yesterday
-                pricing = com.fixmate.data.models.BookingPricing(
-                    basePrice = 3000.0,
-                    totalAmount = 3000.0
-                )
-            ),
-            Booking(
-                id = "sample_4",
-                customerName = "John Doe",
-                serviceName = "Electrical Wiring",
-                description = "Need to fix electrical wiring in the living room.",
-                scheduledDate = System.currentTimeMillis(), // Today
-                scheduledTime = "2:00 PM",
-                status = BookingStatus.IN_PROGRESS,
-                createdAt = System.currentTimeMillis() - (4 * 60 * 60 * 1000), // 4 hours ago
-                pricing = com.fixmate.data.models.BookingPricing(
-                    basePrice = 3500.0,
-                    totalAmount = 3500.0
-                )
-            )
-        )
-        
-        val filteredBookings = filterBookingsByCurrentFilter(sampleBookings)
-        val earnings = calculateTodaysEarnings(sampleBookings)
-        val jobsToday = countJobsToday(sampleBookings)
-        
-        _state.value = _state.value.copy(
-            bookings = filteredBookings,
-            todaysEarnings = "LKR ${earnings.toInt()}",
-            jobsToday = jobsToday,
-            isLoading = false
-        )
     }
 
     private fun loadBookingsForFilter(status: JobStatus) {
