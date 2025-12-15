@@ -29,6 +29,8 @@ android {
         }
         release {
             isMinifyEnabled = false
+            // Use debug keystore for release APK (for testing Google Sign-In)
+            signingConfig = signingConfigs.getByName("debug")
             // Uncomment if you want ProGuard
             // proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
