@@ -19,3 +19,4 @@ local.properties
 
 # Gradle properties with sensitive data
 gradle.properties
+hs_err_pid*.log
