@@ -2,6 +2,8 @@ package com.fixmate.data.models
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.fixmate.utils.Constants
+import java.util.Locale
 
 data class User(
     val id: String = "",
@@ -38,13 +40,29 @@ data class User(
         fun toMap(user: User): Map<String, Any?> {
             val json = toJson(user)
             val type = object : TypeToken<Map<String, Any?>>() {}.type
-            return gson.fromJson(json, type)
+            val map = gson.fromJson<MutableMap<String, Any?>>(json, type)
+
+            // Persist lowercase value to stay compatible with Firestore rules
+            map["userType"] = when (user.userType) {
+                UserType.SERVICE_PROVIDER -> Constants.USER_TYPE_PROVIDER
+                UserType.CUSTOMER -> Constants.USER_TYPE_CUSTOMER
+            }
+
+            return map
         }
-        
+
         // Convert Map to User object (from Firebase)
         fun fromMap(map: Map<String, Any?>): User? {
             return try {
-                val json = gson.toJson(map)
+                val mutableMap = map.toMutableMap()
+                val userTypeString = (mutableMap["userType"] as? String)?.lowercase(Locale.US)
+                mutableMap["userType"] = when (userTypeString) {
+                    "provider", "service_provider", UserType.SERVICE_PROVIDER.name.lowercase(Locale.US) -> UserType.SERVICE_PROVIDER.name
+                    "customer", UserType.CUSTOMER.name.lowercase(Locale.US) -> UserType.CUSTOMER.name
+                    else -> UserType.CUSTOMER.name
+                }
+
+                val json = gson.toJson(mutableMap)
                 fromJson(json)
             } catch (e: Exception) {
                 null

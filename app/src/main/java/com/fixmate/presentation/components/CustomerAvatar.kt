@@ -51,13 +51,14 @@ fun CustomerAvatar(
         } else{
             isLoadingImage = true
             try {
-                val document = firestore.collection("service_providers")
+                val document = firestore.collection("users")
                     .document(customerId)
                     .get()
                     .await()
 
                 if (document.exists()) {
-                    customerProfileImageUrl = document.getString("profileImageUrl")
+                    val providerProfile = document.get("providerProfile") as? Map<String, Any>
+                    customerProfileImageUrl = providerProfile?.get("profileImageUrl") as? String
                 }
             } catch (e: Exception) {
                 // Handle error silently, will show default avatar

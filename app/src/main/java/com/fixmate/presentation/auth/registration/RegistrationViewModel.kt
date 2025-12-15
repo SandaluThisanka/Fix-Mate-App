@@ -109,7 +109,7 @@ open class RegistrationViewModel @Inject constructor(
                 Timber.e(e, "Failed to send verification email")
                 _uiState.update { 
                     it.copy(
-                        error = "Failed to send verification code: ${e.message ?: "Unknown error"}",
+                        error = "Failed to send verification code. Please check your internet connection and try again.",
                         isLoading = false
                     )
                 }
@@ -238,7 +238,7 @@ open class RegistrationViewModel @Inject constructor(
                         Timber.e(exception, "Registration failed")
                         _uiState.update { 
                             it.copy(
-                                error = "Registration failed: ${exception.message ?: "Unknown error"}",
+                                error = getRegistrationErrorMessage(exception),
                                 isLoading = false
                             )
                         }
@@ -248,11 +248,35 @@ open class RegistrationViewModel @Inject constructor(
                 Timber.e(e, "Registration failed")
                 _uiState.update { 
                     it.copy(
-                        error = "Registration failed: ${e.message ?: "Unknown error"}",
+                        error = getRegistrationErrorMessage(e),
                         isLoading = false
                     )
                 }
             }
+        }
+    }
+    
+    private fun getRegistrationErrorMessage(exception: Throwable): String {
+        return when {
+            exception.message?.contains("email address is already in use") == true ||
+            exception.message?.contains("EMAIL_EXISTS") == true -> 
+                "An account with this email already exists. Please login instead."
+            
+            exception.message?.contains("email address is badly formatted") == true ||
+            exception.message?.contains("INVALID_EMAIL") == true -> 
+                "Please enter a valid email address."
+            
+            exception.message?.contains("password is too weak") == true ||
+            exception.message?.contains("WEAK_PASSWORD") == true -> 
+                "Password is too weak. Please use at least 6 characters."
+            
+            exception.message?.contains("network error") == true -> 
+                "Network error. Please check your connection and try again."
+            
+            exception.message?.contains("too many requests") == true -> 
+                "Too many attempts. Please try again later."
+            
+            else -> "Registration failed. Please try again."
         }
     }
     

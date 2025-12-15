@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.fixmate.data.models.ServiceProvider
 import com.fixmate.data.repositories.ImageRepository
+import com.fixmate.utils.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,39 +38,88 @@ class ProviderProfileViewModel @Inject constructor(
 
     private fun loadProviderProfile() {
         viewModelScope.launch {
-            auth.currentUser?.let { user ->
-                try {
-                    // Get the provider document
-                    val providerDoc = firestore.collection("service_providers")
-                        .document(user.uid)
-                        .get()
-                        .await()
-                    
-                    val provider = providerDoc.data?.let { ServiceProvider.fromMap(it) }
-                        ?: throw Exception("Provider data not found")
+            val currentUser = auth.currentUser ?: return@launch
+            try {
+                Log.d("ProviderProfileVM", "Loading profile for user: ${currentUser.uid}")
+                
+                // Load user document
+                val userDoc = firestore.collection(Constants.COLLECTION_USERS)
+                    .document(currentUser.uid)
+                    .get()
+                    .await()
 
-                    // Get the user document for additional details
-                    val userDoc = firestore.collection("users")
-                        .document(user.uid)
-                        .get()
-                        .await()
+                // Load provider document
+                val providerDoc = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+                    .document(currentUser.uid)
+                    .get()
+                    .await()
 
+                if (!providerDoc.exists()) {
+                    Log.e("ProviderProfileVM", "Provider document missing for user ${currentUser.uid}")
+                    // Create default profile to avoid blank screen
                     _providerProfile.value = ProviderProfile(
-                        name = provider.businessName,
-                        memberSince = formatDate(provider.createdAt),
-                        completedJobs = provider.completedJobs,
-                        totalJobs = provider.totalJobs,
-                        location = "${provider.serviceLocation.country}",
-                        totalEarnings = formatCurrency(provider.totalEarnings),
-                        email = auth.currentUser?.email ?: "",
+                        name = userDoc.getString("displayName") ?: "Provider",
+                        memberSince = formatDate(System.currentTimeMillis()),
+                        completedJobs = 0,
+                        totalJobs = 0,
+                        location = "Not set",
+                        totalEarnings = "LKR 0",
+                        email = currentUser.email ?: "",
                         phoneNumber = userDoc.getString("phoneNumber") ?: "",
-                        isAvailable = provider.isAvailable,
-                        responseTime = provider.responseTime,
-                        profileImageUrl = providerDoc.getString("profileImageUrl") // Get from service_providers collection
+                        isAvailable = true,
+                        responseTime = "within 1 hour",
+                        profileImageUrl = userDoc.getString("profileImageUrl")
                     )
-                } catch (e: Exception) {
-                    Log.e("ProviderProfileVM", "Error loading profile", e)
+                    return@launch
                 }
+
+                val providerData = providerDoc.data ?: emptyMap<String, Any?>()
+                Log.d("ProviderProfileVM", "Provider data loaded: ${providerData.keys}")
+                
+                val provider = ServiceProvider.fromMap(providerData)
+
+                if (provider == null) {
+                    Log.e("ProviderProfileVM", "Failed to parse provider data")
+                    throw Exception("Provider data not found")
+                }
+
+                val locationText = when {
+                    provider.serviceLocation.formattedAddress.isNotBlank() -> provider.serviceLocation.formattedAddress
+                    provider.serviceLocation.city.isNotBlank() -> "${provider.serviceLocation.city}, ${provider.serviceLocation.province}"
+                    else -> "Location not set"
+                }
+
+                _providerProfile.value = ProviderProfile(
+                    name = provider.businessName.ifBlank { userDoc.getString("displayName") ?: "Provider" },
+                    memberSince = formatDate(provider.createdAt),
+                    completedJobs = provider.completedJobs,
+                    totalJobs = provider.totalJobs,
+                    location = locationText,
+                    totalEarnings = formatCurrency(provider.totalEarnings),
+                    email = currentUser.email ?: "",
+                    phoneNumber = userDoc.getString("phoneNumber") ?: "",
+                    isAvailable = provider.isAvailable,
+                    responseTime = provider.responseTime,
+                    profileImageUrl = userDoc.getString("profileImageUrl") ?: provider.profileImageUrl
+                )
+                
+                Log.d("ProviderProfileVM", "Profile loaded successfully: ${_providerProfile.value?.name}")
+            } catch (e: Exception) {
+                Log.e("ProviderProfileVM", "Error loading profile", e)
+                // Set a default profile to avoid blank screen
+                _providerProfile.value = ProviderProfile(
+                    name = currentUser.displayName ?: "Provider",
+                    memberSince = formatDate(System.currentTimeMillis()),
+                    completedJobs = 0,
+                    totalJobs = 0,
+                    location = "Not set",
+                    totalEarnings = "LKR 0",
+                    email = currentUser.email ?: "",
+                    phoneNumber = "",
+                    isAvailable = true,
+                    responseTime = "within 1 hour",
+                    profileImageUrl = null
+                )
             }
         }
     }
@@ -79,24 +129,26 @@ class ProviderProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val userUpdates = mapOf(
-                    "phoneNumber" to phoneNumber,
-                    "updatedAt" to System.currentTimeMillis()
-                )
+                val now = System.currentTimeMillis()
 
-                val providerUpdates = mapOf(
-                    "businessName" to name,
-                    "updatedAt" to System.currentTimeMillis()
-                )
-
-                // Update user document
-                firestore.collection("users").document(currentUser.uid)
-                    .update(userUpdates)
+                firestore.collection(Constants.COLLECTION_USERS)
+                    .document(currentUser.uid)
+                    .update(
+                        mapOf(
+                            "phoneNumber" to phoneNumber,
+                            "updatedAt" to now
+                        )
+                    )
                     .await()
 
-                // Update provider document
-                firestore.collection("service_providers").document(currentUser.uid)
-                    .update(providerUpdates)
+                firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+                    .document(currentUser.uid)
+                    .update(
+                        mapOf(
+                            "businessName" to name,
+                            "updatedAt" to now
+                        )
+                    )
                     .await()
 
                 loadProviderProfile() // Reload profile after update
@@ -118,9 +170,26 @@ class ProviderProfileViewModel @Inject constructor(
                 
                 val result = imageRepository.uploadProfileImage(imageUri, currentUser.uid)
                 result.onSuccess { imageUrl ->
-                    // Update service_providers collection with new profile image URL
-                    firestore.collection("service_providers").document(currentUser.uid)
-                        .update("profileImageUrl", imageUrl)
+                    val now = System.currentTimeMillis()
+
+                    // Update provider profile image within service_providers collection
+                    firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+                        .document(currentUser.uid)
+                        .update(
+                            mapOf(
+                                "profileImageUrl" to imageUrl,
+                                "updatedAt" to now
+                            )
+                        )
+                        .await()
+
+                    firestore.collection(Constants.COLLECTION_USERS)
+                        .document(currentUser.uid)
+                        .update(
+                            mapOf(
+                                "updatedAt" to now
+                            )
+                        )
                         .await()
 
                     // Delete old image if it exists
@@ -161,9 +230,23 @@ class ProviderProfileViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
-                firestore.collection("service_providers")
+                firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
                     .document(currentUser.uid)
-                    .update("isAvailable", isAvailable)
+                    .update(
+                        mapOf(
+                            "isAvailable" to isAvailable,
+                            "updatedAt" to System.currentTimeMillis()
+                        )
+                    )
+                    .await()
+
+                firestore.collection(Constants.COLLECTION_USERS)
+                    .document(currentUser.uid)
+                    .update(
+                        mapOf(
+                            "updatedAt" to System.currentTimeMillis()
+                        )
+                    )
                     .await()
                 
                 loadProviderProfile() // Reload profile after update

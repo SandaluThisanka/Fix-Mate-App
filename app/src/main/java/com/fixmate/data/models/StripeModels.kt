@@ -4,64 +4,64 @@ import com.google.gson.annotations.SerializedName
 
 // Request models for backend API
 data class CreatePaymentIntentRequest(
-    @SerializedName("booking_id")
+    @SerializedName("bookingId")
     val bookingId: String,
     @SerializedName("amount")
-    val amount: Long, // Amount in cents
+    val amount: Double, // Amount in LKR (backend converts to paisa)
     @SerializedName("currency")
     val currency: String = "lkr",
-    @SerializedName("customer_id")
+    @SerializedName("customerId")
     val customerId: String,
-    @SerializedName("provider_id")
+    @SerializedName("providerId")
     val providerId: String,
-    @SerializedName("payment_method_types")
+    @SerializedName("paymentMethodTypes")
     val paymentMethodTypes: List<String> = listOf("card")
 )
 
 data class CreatePaymentIntentResponse(
-    @SerializedName("client_secret")
+    @SerializedName("clientSecret")
     val clientSecret: String,
-    @SerializedName("payment_intent_id")
+    @SerializedName("paymentIntentId")
     val paymentIntentId: String,
-    @SerializedName("publishable_key")
+    @SerializedName("publishableKey")
     val publishableKey: String
 )
 
 data class ConfirmPaymentRequest(
-    @SerializedName("payment_intent_id")
+    @SerializedName("paymentIntentId")
     val paymentIntentId: String,
-    @SerializedName("booking_id")
+    @SerializedName("bookingId")
     val bookingId: String
 )
 
 data class ConfirmPaymentResponse(
     @SerializedName("success")
     val success: Boolean,
-    @SerializedName("payment_status")
+    @SerializedName("paymentStatus")
     val paymentStatus: String,
-    @SerializedName("booking_status")
+    @SerializedName("bookingStatus")
     val bookingStatus: String,
     @SerializedName("message")
     val message: String
 )
 
 data class CashPaymentRequest(
-    @SerializedName("booking_id")
+    @SerializedName("bookingId")
     val bookingId: String,
     @SerializedName("amount")
     val amount: Double,
-    @SerializedName("customer_id")
+    @SerializedName("customerId")
     val customerId: String,
-    @SerializedName("provider_id")
+    @SerializedName("providerId")
     val providerId: String
 )
 
 data class CashPaymentResponse(
     @SerializedName("success")
     val success: Boolean,
-    @SerializedName("payment_id")
+    @SerializedName("paymentId")
     val paymentId: String,
-    @SerializedName("booking_status")
+    @SerializedName("bookingStatus")
     val bookingStatus: String,
     @SerializedName("message")
     val message: String

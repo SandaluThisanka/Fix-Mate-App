@@ -1,5 +1,6 @@
 package com.fixmate.presentation.customer.payment
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fixmate.data.models.StripePaymentMethod
@@ -26,12 +27,22 @@ class StripePaymentViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingBooking = true, error = null)
             
+            Log.d("FIXMATE_PAYMENT", "========== FETCH BOOKING DETAILS ==========")
+            Log.d("FIXMATE_PAYMENT", "Booking ID: $bookingId")
+            Timber.d("========== FETCH BOOKING DETAILS ==========")
+            Timber.d("Booking ID: $bookingId")
+            
             try {
                 val result = bookingRepository.getBookingById(bookingId)
                 
                 result.fold(
                     onSuccess = { booking ->
                         if (booking != null) {
+                            Timber.d("✅ Booking fetched successfully")
+                            Timber.d("  - Customer: ${booking.customerId}")
+                            Timber.d("  - Provider: ${booking.providerId}")
+                            Timber.d("  - Amount: ${booking.pricing.totalAmount}")
+                            
                             _state.value = _state.value.copy(
                                 isLoadingBooking = false,
                                 booking = booking,
@@ -39,28 +50,28 @@ class StripePaymentViewModel @Inject constructor(
                                 customerId = booking.customerId,
                                 providerId = booking.providerId
                             )
-                            Timber.d("Booking details fetched successfully for booking: $bookingId")
                         } else {
+                            Timber.e("❌ Booking is null")
                             _state.value = _state.value.copy(
                                 isLoadingBooking = false,
-                                error = "Booking not found"
+                                error = "Booking not found. Please try again."
                             )
                         }
                     },
                     onFailure = { exception ->
+                        Timber.e(exception, "❌ Failed to fetch booking")
                         _state.value = _state.value.copy(
                             isLoadingBooking = false,
                             error = exception.message ?: "Failed to fetch booking details"
                         )
-                        Timber.e(exception, "Failed to fetch booking details")
                     }
                 )
             } catch (e: Exception) {
+                Timber.e(e, "❌ Exception in fetchBookingDetails")
                 _state.value = _state.value.copy(
                     isLoadingBooking = false,
                     error = e.message ?: "Unknown error occurred"
                 )
-                Timber.e(e, "Error in fetchBookingDetails")
             }
         }
     }
@@ -69,17 +80,56 @@ class StripePaymentViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             
+            Log.d("FIXMATE_PAYMENT", "========== CREATE PAYMENT INTENT CALLED ==========")
+            Log.d("FIXMATE_PAYMENT", "Booking ID: $bookingId")
+            
             try {
                 val currentState = _state.value
                 val booking = currentState.booking
                 
+                Log.d("FIXMATE_PAYMENT", "Booking null?: ${booking == null}")
+                Timber.d("========== CREATE PAYMENT INTENT ==========")
+                Timber.d("Booking ID from param: $bookingId")
+                Timber.d("Booking object null?: ${booking == null}")
+                
                 if (booking == null) {
+                    Timber.e("❌ Cannot create payment intent: Booking is null")
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        error = "Booking details not loaded. Please try again."
+                        error = "Booking details not loaded. Please go back and try again."
                     )
                     return@launch
                 }
+                
+                // Validate all required fields
+                Timber.d("Booking Details:")
+                Timber.d("  - Booking ID: ${booking.id}")
+                Timber.d("  - Customer ID: ${booking.customerId}")
+                Timber.d("  - Provider ID: ${booking.providerId}")
+                Timber.d("  - Total Amount: ${booking.pricing.totalAmount}")
+                Timber.d("  - Amount in cents: ${(booking.pricing.totalAmount * 100).toLong()}")
+                
+                // Check for empty/invalid fields
+                val validationErrors = mutableListOf<String>()
+                if (bookingId.isBlank()) validationErrors.add("Booking ID is empty")
+                if (booking.customerId.isBlank()) validationErrors.add("Customer ID is empty")
+                if (booking.providerId.isBlank()) validationErrors.add("Provider ID is empty")
+                if (booking.pricing.totalAmount <= 0) validationErrors.add("Amount is zero or negative")
+                
+                if (validationErrors.isNotEmpty()) {
+                    val errorMsg = "Invalid booking data: ${validationErrors.joinToString(", ")}"
+                    Log.e("FIXMATE_PAYMENT", "VALIDATION FAILED: $errorMsg")
+                    Timber.e("❌ $errorMsg")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = errorMsg
+                    )
+                    return@launch
+                }
+                
+                Log.d("FIXMATE_PAYMENT", "Validation passed - calling backend")
+                
+                Timber.d("✅ All fields validated. Creating payment intent...")
                 
                 val result = paymentRepository.createPaymentIntent(
                     bookingId = bookingId,
@@ -97,22 +147,24 @@ class StripePaymentViewModel @Inject constructor(
                             publishableKey = response.publishableKey,
                             isPaymentIntentCreated = true
                         )
-                        Timber.d("Payment intent created successfully")
+                        Timber.d("✅ Payment intent created - Ready for payment")
                     },
                     onFailure = { exception ->
+                        val userMessage = exception.message ?: "Failed to prepare payment. Please try again."
                         _state.value = _state.value.copy(
                             isLoading = false,
-                            error = exception.message ?: "Failed to create payment intent"
+                            error = userMessage
                         )
-                        Timber.e(exception, "Failed to create payment intent")
+                        Timber.e(exception, "❌ Payment intent creation failed")
                     }
                 )
             } catch (e: Exception) {
+                val errorMsg = "Payment preparation failed: ${e.message ?: "Unknown error"}\nPlease try again."
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Unknown error occurred"
+                    error = errorMsg
                 )
-                Timber.e(e, "Error in createPaymentIntent")
+                Timber.e(e, "❌ Exception in createPaymentIntent ViewModel")
             }
         }
     }

@@ -38,9 +38,23 @@ object NetworkModule {
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(httpLoggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                timber.log.Timber.d("🌐 HTTP Request: ${request.method} ${request.url}")
+                try {
+                    val response = chain.proceed(request)
+                    timber.log.Timber.d("✅ HTTP Response: ${response.code} for ${request.url}")
+                    response
+                } catch (e: Exception) {
+                    timber.log.Timber.e(e, "❌ HTTP Request failed for ${request.url}")
+                    throw e
+                }
+            }
+            .connectTimeout(90, TimeUnit.SECONDS)  // Increased for cold start
+            .readTimeout(90, TimeUnit.SECONDS)
+            .writeTimeout(90, TimeUnit.SECONDS)
+            .callTimeout(120, TimeUnit.SECONDS)    // Overall timeout
+            .retryOnConnectionFailure(true)
             .build()
     }
 
@@ -48,7 +62,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://sevalk-payment-backend.onrender.com/")
+            .baseUrl("https://magnificent-fulfillment-firebaseserviceaccount.up.railway.app/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

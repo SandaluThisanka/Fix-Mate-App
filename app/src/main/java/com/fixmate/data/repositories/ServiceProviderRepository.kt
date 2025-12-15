@@ -14,6 +14,14 @@ import timber.log.Timber
 class ServiceProviderRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
+    private fun numberToDouble(value: Any?): Double {
+        return when (value) {
+            is Number -> value.toDouble()
+            is String -> value.toDoubleOrNull() ?: 0.0
+            else -> 0.0
+        }
+    }
+
     private fun getServiceType(service: Service?): ServiceType {
         return when (service?.name?.uppercase()) {
             "PLUMBING" -> ServiceType.PLUMBING
@@ -25,27 +33,52 @@ class ServiceProviderRepository @Inject constructor(
 
     suspend fun getServiceProviders(): List<MapServiceProvider> {
         return try {
-            val snapshot = firestore.collection("service_providers")
+            val snapshot = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
                 .get()
                 .await()
+            
+            Timber.d("Fetched ${snapshot.documents.size} provider documents from Firestore")
 
             snapshot.documents.mapNotNull { document ->
                 try {
                     val data = document.data ?: return@mapNotNull null
+                    val businessName = data["businessName"] as? String ?: "Unknown"
 
                     val serviceLocation = data["serviceLocation"] as? Map<String, Any>
-                    val latitude = serviceLocation?.get("latitude") as? Double ?: 0.0
-                    val longitude = serviceLocation?.get("longitude") as? Double ?: 0.0
+                    val locationLat = numberToDouble(serviceLocation?.get("latitude"))
+                    val locationLng = numberToDouble(serviceLocation?.get("longitude"))
+                    // Fall back to legacy top-level latitude/longitude if serviceLocation is missing
+                    val latitude = if (locationLat != 0.0) locationLat else numberToDouble(data["latitude"])
+                    val longitude = if (locationLng != 0.0) locationLng else numberToDouble(data["longitude"])
+
+                    // Skip providers without valid location (check if both are zero OR if location object is missing)
+                    if (latitude == 0.0 && longitude == 0.0) {
+                        Timber.w("⚠️ Provider '$businessName' (${document.id}) skipped - NO LOCATION SET. Provider needs to set service location.")
+                        return@mapNotNull null
+                    }
 
                     val services = data["services"] as? List<Map<String, Any>> ?: emptyList()
+                    
+                    // Skip providers without services
+                    if (services.isEmpty()) {
+                        Timber.w("⚠️ Provider '$businessName' (${document.id}) skipped - NO SERVICES ADDED. Provider needs to add services.")
+                        return@mapNotNull null
+                    }
+                    
                     val firstService = services.firstOrNull()
-
                     val serviceName = firstService?.get("name") as? String
                     val additionalServicesCount = if (services.size > 1) services.size - 1 else 0
                     
-                    Timber.d("Provider ${document.id} service: $serviceName, additional: $additionalServicesCount")
+                    Timber.d("Provider ${document.id} service: $serviceName, additional: $additionalServicesCount, location: ($latitude, $longitude)")
 
                     val price = firstService?.get("price") as? String ?: "0"
+                    
+                    // Fetch user details for phone number and profile image
+                    val userDoc = firestore.collection(Constants.COLLECTION_USERS)
+                        .document(document.id)
+                        .get()
+                        .await()
+                    val userData = userDoc.data
                     
                     MapServiceProvider(
                         id = document.id,
@@ -56,13 +89,18 @@ class ServiceProviderRepository @Inject constructor(
                         rating = (data["rating"] as? Double)?.toFloat() ?: 0f,
                         description = "${serviceName ?: "Service"}${if (additionalServicesCount > 0) " +$additionalServicesCount more" else ""}",
                         hourlyRate = price.toDoubleOrNull() ?: 0.0,
-                        phone = data["phone"] as? String ?: "",
+                        phone = userData?.get("phoneNumber") as? String ?: "",
                         completedJobs = (data["completedJobs"] as? Long)?.toInt() ?: 0,
-                        profileImageUrl = data["profileImageUrl"] as? String ?: "" // Get directly from service_providers collection
+                        profileImageUrl = userData?.get("profileImageUrl") as? String ?: ""
                     )
                 } catch (e: Exception) {
                     Timber.e(e, "Error mapping provider document ${document.id}")
                     null
+                }
+            }.also { providers ->
+                Timber.d("✅ Successfully loaded ${providers.size} providers with location and services set")
+                if (providers.isEmpty()) {
+                    Timber.w("⚠️ NO PROVIDERS AVAILABLE ON MAP. Providers need to: 1) Set service location, 2) Add services")
                 }
             }
         } catch (e: Exception) {
@@ -86,7 +124,7 @@ class ServiceProviderRepository @Inject constructor(
     suspend fun getServiceProviderById(providerId: String): ServiceProvider? {
         return try {
             Timber.d("Fetching provider with ID: $providerId")
-            val document = firestore.collection("service_providers")
+            val document = firestore.collection(Constants.COLLECTION_USERS)
                 .document(providerId)
                 .get()
                 .await()
@@ -94,7 +132,12 @@ class ServiceProviderRepository @Inject constructor(
             if (document.exists()) {
                 val data = document.data
                 if (data != null) {
-                    val provider = ServiceProvider.fromMap(data)
+                    val providerProfile = data["providerProfile"] as? Map<String, Any?>
+                    val provider = if (providerProfile != null) {
+                        ServiceProvider.fromMap(providerProfile)
+                    } else {
+                        null
+                    }
                     Timber.d("Provider found: ${provider?.businessName}")
                     provider
                 } else {
@@ -113,9 +156,11 @@ class ServiceProviderRepository @Inject constructor(
 
     suspend fun searchServiceProviders(query: String): List<MapServiceProvider> {
         return try {
-            val snapshot = firestore.collection("service_providers")
+            val snapshot = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
                 .get()
                 .await()
+            
+            Timber.d("Searching ${snapshot.documents.size} providers for query: '$query'")
 
             snapshot.documents.mapNotNull { document ->
                 try {
@@ -135,14 +180,29 @@ class ServiceProviderRepository @Inject constructor(
                     if (!matchesQuery) return@mapNotNull null
 
                     val serviceLocation = data["serviceLocation"] as? Map<String, Any>
-                    val latitude = serviceLocation?.get("latitude") as? Double ?: 0.0
-                    val longitude = serviceLocation?.get("longitude") as? Double ?: 0.0
+                    val locationLat = numberToDouble(serviceLocation?.get("latitude"))
+                    val locationLng = numberToDouble(serviceLocation?.get("longitude"))
+                    val latitude = if (locationLat != 0.0) locationLat else numberToDouble(data["latitude"])
+                    val longitude = if (locationLng != 0.0) locationLng else numberToDouble(data["longitude"])
+
+                    // Skip providers without location
+                    if (latitude == 0.0 && longitude == 0.0) return@mapNotNull null
+                    
+                    // Skip providers without services
+                    if (services.isEmpty()) return@mapNotNull null
 
                     val firstService = services.firstOrNull()
                     val serviceName = firstService?.get("name") as? String
                     val additionalServicesCount = if (services.size > 1) services.size - 1 else 0
 
-                    val price = firstService?.get("price") as? Long ?: 0L 
+                    val price = firstService?.get("price") as? String ?: "0"
+                    
+                    // Fetch user details for phone number and profile image
+                    val userDoc = firestore.collection(Constants.COLLECTION_USERS)
+                        .document(document.id)
+                        .get()
+                        .await()
+                    val userData = userDoc.data
                     
                     MapServiceProvider(
                         id = document.id,
@@ -152,10 +212,10 @@ class ServiceProviderRepository @Inject constructor(
                         longitude = longitude,
                         rating = (data["rating"] as? Double)?.toFloat() ?: 0f,
                         description = "${serviceName ?: "Service"}${if (additionalServicesCount > 0) " +$additionalServicesCount more" else ""}",
-                        phone = data["phone"] as? String ?: "",
-                        hourlyRate = price.toDouble(),
+                        phone = userData?.get("phoneNumber") as? String ?: "",
+                        hourlyRate = price.toDoubleOrNull() ?: 0.0,
                         completedJobs = (data["completedJobs"] as? Long)?.toInt() ?: 0,
-                        profileImageUrl = data["profileImageUrl"] as? String ?: "" // Get directly from service_providers collection
+                        profileImageUrl = userData?.get("profileImageUrl") as? String ?: ""
                     )
                 } catch (e: Exception) {
                     Timber.e(e, "Error mapping provider document ${document.id}")
