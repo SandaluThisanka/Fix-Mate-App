@@ -15,17 +15,23 @@ class GoogleSignInHelper(private val context: Context) {
     
     suspend fun getSignInIntent(): Intent {
         // Create GoogleSignInOptions without filtering by account
+        val webClientId = context.getString(R.string.default_web_client_id)
+        Timber.d("Google Sign-In: Using Web Client ID: $webClientId")
+        
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestIdToken(webClientId)
             .requestEmail()
+            .requestProfile()
             .build()
         
         val client = GoogleSignIn.getClient(context, gso)
         
         try {
             // Sign out and revoke access to force account selection
+            Timber.d("Google Sign-In: Clearing previous sign-in state")
             client.signOut().await()
             client.revokeAccess().await()
+            Timber.d("Google Sign-In: Previous state cleared successfully")
         } catch (e: Exception) {
             Timber.w(e, "Failed to clear Google Sign-In cache")
         }
@@ -37,9 +43,18 @@ class GoogleSignInHelper(private val context: Context) {
         return try {
             val account = task.getResult(ApiException::class.java)
             Timber.d("Google Sign-In successful: ${account?.email}")
+            Timber.d("ID Token available: ${account?.idToken != null}")
+            Timber.d("Display Name: ${account?.displayName}")
             account
         } catch (e: ApiException) {
-            Timber.e(e, "Google Sign-In failed with status code: ${e.statusCode}")
+            val errorMessage = when (e.statusCode) {
+                10 -> "Developer Error: Check SHA-1 fingerprint in Firebase Console"
+                12500 -> "Sign In Failed: Google Play Services is updating"
+                12501 -> "Sign In Cancelled by user"
+                12502 -> "Sign In Failed: Network error"
+                else -> "Error code: ${e.statusCode}"
+            }
+            Timber.e(e, "Google Sign-In failed: $errorMessage")
             null
         }
     }

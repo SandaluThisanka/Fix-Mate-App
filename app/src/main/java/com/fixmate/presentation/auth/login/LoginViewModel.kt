@@ -148,11 +148,13 @@ class LoginViewModel @Inject constructor(
         onNavigateToUserTypeSelection: (String, String) -> Unit,
         onLoginSuccess: () -> Unit
     ) {
+        Timber.d("Google Sign-In: Processing result...")
         _uiState.update { it.copy(isLoading = true) }
         
         viewModelScope.launch {
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                Timber.d("Google Sign-In: Task received, processing...")
                 val account = googleSignInHelper.handleSignInResult(task)
                 
                 if (account != null) {
@@ -192,9 +194,10 @@ class LoginViewModel @Inject constructor(
                             }
                         )
                     } else {
+                        Timber.e("Google Sign-In: ID Token is null. This usually means the Web Client ID is incorrect or Google Sign-In is not properly configured in Firebase Console.")
                         _uiState.update { 
                             it.copy(
-                                errorMessage = "Failed to get Google ID token",
+                                errorMessage = "Failed to get Google ID token. Please check Firebase configuration.",
                                 isLoading = false
                             )
                         }
