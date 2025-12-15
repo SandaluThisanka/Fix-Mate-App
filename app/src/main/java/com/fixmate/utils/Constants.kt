@@ -53,117 +53,100 @@ object Constants {
 
     // Service Categories
     object CategoryNames {
-        const val HOME_SERVICES = "Home Services"
-        const val EDUCATION_TUTORING = "Education & Tutoring"
-        const val PERSONAL_CARE_WELLNESS = "Personal Care & Wellness"
-        const val AUTOMOTIVE_SERVICES = "Automotive Services"
-        const val EVENTS_ENTERTAINMENT = "Events & Entertainment"
-        const val TECHNOLOGY_DIGITAL = "Technology & Digital"
-        const val BUSINESS_PROFESSIONAL = "Business & Professional"
-        const val TRANSPORTATION_DELIVERY = "Transportation & Delivery"
+        const val MECHANICAL = "Mechanical"
+        const val ELECTRICAL = "Electrical"
+        const val SUSPENSION = "Suspension"
+        const val BRAKES = "Brakes"
+        const val BODY_CARE = "Body & Care"
+        const val TIRES = "Tires"
+        const val EMERGENCY = "Emergency"
     }
 
     // Service Display Names
     object ServiceNames {
 
-        // Home Services
-        const val PLUMBING = "Plumbing"
-        const val CLEANING_RESIDENTIAL = "Cleaning (Residential)"
-        const val PAINTING_DECORATING = "Painting & Decorating"
-        const val APPLIANCE_REPAIR = "Appliance Repair"
+        // Mechanical
+        const val GENERAL_SERVICE = "General Service"
+        const val ENGINE_REPAIR = "Engine Repair"
+        const val GEARBOX_CLUTCH = "Gearbox & Clutch"
+        const val FUEL_SYSTEM_REPAIR = "Fuel System Repair"
 
-        // Education & Tutoring
-        const val MATH_TUTORING = "Math Tutoring"
-        const val MUSIC_LESSONS = "Music Lessons"
-        const val TEST_PREP = "Test Prep (SAT, ACT, etc.)"
-        const val ACADEMIC_WRITING_HELP = "Academic Writing Help"
+        // Electrical
+        const val AUTO_ELECTRICAL_REPAIR = "Auto Electrical Repair"
+        const val BATTERY_REPLACEMENT = "Battery Replacement"
+        const val ECU_SCANNING = "ECU Scanning"
+        const val LIGHTING_WIRING = "Lighting & Wiring"
 
-        // Personal Care & Wellness
-        const val HAIR_STYLING_CUTTING = "Hair Styling & Cutting"
-        const val MASSAGE_THERAPY = "Massage Therapy"
-        const val PERSONAL_TRAINING = "Personal Training"
-        const val CHILD_CARE_BABYSITTING = "Child Care/Babysitting"
+        // Suspension
+        const val SUSPENSION_REPAIR = "Suspension Repair"
+        const val SHOCK_ABSORBERS = "Shock Absorbers"
+        const val STEERING_REPAIR = "Steering Repair"
+        const val WHEEL_ALIGNMENT = "Wheel Alignment"
 
-        // Automotive Services
-        const val CAR_REPAIR_MAINTENANCE = "Car Repair & Maintenance"
-        const val OIL_CHANGE = "Oil Change"
-        const val CAR_DETAILING_WASHING = "Car Detailing & Washing"
-        const val TIRE_SERVICES = "Tire Services"
+        // Brakes
+        const val BRAKE_REPAIR = "Brake Repair"
+        const val ABS_REPAIR = "ABS Repair"
+        const val BRAKE_PADS_DISCS = "Brake Pads & Discs"
 
-        // Events & Entertainment
-        const val EVENT_PHOTOGRAPHY = "Event Photography"
-        const val CATERING_SERVICES = "Catering Services"
-        const val DJ_SERVICES = "DJ Services"
-        const val EQUIPMENT_RENTAL = "Equipment Rental"
+        // Body & Care
+        const val BODY_PAINTING = "Body Painting"
+        const val DENTING_WELDING = "Denting & Welding"
+        const val INTERIOR_CLEANING = "Interior Cleaning"
+        const val FULL_DETAILING = "Full Detailing"
 
-        // Technology & Digital
-        const val COMPUTER_REPAIR = "Computer Repair"
-        const val PHONE_TABLET_REPAIR = "Phone/Tablet Repair"
-        const val SMART_HOME_SETUP = "Smart Home Setup"
-        const val SECURITY_SYSTEM_INSTALLATION = "Security System Installation"
+        // Tires
+        const val TIRE_REPLACEMENT = "Tire Replacement"
+        const val PUNCTURE_REPAIR = "Puncture Repair"
+        const val WHEEL_BALANCING = "Wheel Balancing"
 
-        // Business & Professional
-        const val ACCOUNTING_BOOKKEEPING = "Accounting & Bookkeeping"
-        const val LEGAL_CONSULTATION = "Legal Consultation"
-        const val GRAPHIC_DESIGN = "Graphic Design"
-        const val CONTENT_WRITING = "Content Writing"
-
-        // Transportation & Delivery
-        const val MOVING_SERVICES = "Moving Services"
-        const val DELIVERY_SERVICES = "Delivery Services"
-        const val RIDE_SERVICES = "Ride Services"
-        const val FURNITURE_ASSEMBLY = "Furniture Assembly"
+        // Emergency
+        const val TOWING_SERVICE = "Towing Service"
+        const val JUMP_START = "Jump Start"
+        const val ROADSIDE_ASSISTANCE = "Roadside Assistance"
+        const val MOBILE_MECHANIC = "Mobile Mechanic"
     }
 
     object ServiceDescriptions {
 
-        // Home Services
-        const val PLUMBING = "Fixing and installing water systems like pipes and faucets."
-        const val CLEANING_RESIDENTIAL = "General home cleaning services."
-        const val PAINTING_DECORATING = "Interior and exterior painting, wall design."
-        const val APPLIANCE_REPAIR = "Repairing home appliances like refrigerators, washing machines."
+        // Mechanical
+        const val GENERAL_SERVICE = "Routine vehicle servicing and maintenance."
+        const val ENGINE_REPAIR = "Engine diagnosis and repair."
+        const val GEARBOX_CLUTCH = "Transmission and clutch repairs."
+        const val FUEL_SYSTEM_REPAIR = "Fuel pump and injector servicing."
 
-        // Education & Tutoring
-        const val MATH_TUTORING = "Helping students understand and solve math problems."
-        const val MUSIC_LESSONS = "Teaching instruments or vocals."
-        const val TEST_PREP = "Guiding students in preparation for exams."
-        const val ACADEMIC_WRITING_HELP = "Assisting with essays and academic papers."
+        // Electrical
+        const val AUTO_ELECTRICAL_REPAIR = "Electrical system fault repairs."
+        const val BATTERY_REPLACEMENT = "Battery testing and replacement."
+        const val ECU_SCANNING = "Computer-based diagnostics for vehicle faults."
+        const val LIGHTING_WIRING = "Lighting and wiring issue repairs."
 
-        // Personal Care & Wellness
-        const val HAIR_STYLING_CUTTING = "Haircuts and styling for men, women, and children."
-        const val MASSAGE_THERAPY = "Relaxation and therapeutic massages."
-        const val PERSONAL_TRAINING = "Fitness training and workout guidance."
-        const val CHILD_CARE_BABYSITTING = "Looking after children at home."
+        // Suspension
+        const val SUSPENSION_REPAIR = "Suspension system inspections and repairs."
+        const val SHOCK_ABSORBERS = "Shock absorber replacement services."
+        const val STEERING_REPAIR = "Power steering maintenance and repairs."
+        const val WHEEL_ALIGNMENT = "Wheel alignment and balancing services."
 
-        // Automotive Services
-        const val CAR_REPAIR_MAINTENANCE = "General vehicle repair and upkeep."
-        const val OIL_CHANGE = "Replacing engine oil and filter."
-        const val CAR_DETAILING_WASHING = "Cleaning and polishing vehicles."
-        const val TIRE_SERVICES = "Tire fitting, rotation, or repairs."
+        // Brakes
+        const val BRAKE_REPAIR = "Brake system inspection and repairs."
+        const val ABS_REPAIR = "ABS system diagnostics and repairs."
+        const val BRAKE_PADS_DISCS = "Brake pad and disc replacement."
 
-        // Events & Entertainment
-        const val EVENT_PHOTOGRAPHY = "Capturing photos at events."
-        const val CATERING_SERVICES = "Providing food and drinks for events."
-        const val DJ_SERVICES = "Playing music at parties and events."
-        const val EQUIPMENT_RENTAL = "Providing rental equipment for events."
+        // Body & Care
+        const val BODY_PAINTING = "Vehicle body painting and touch-ups."
+        const val DENTING_WELDING = "Accident dent repair and welding."
+        const val INTERIOR_CLEANING = "Interior detailing and cleaning."
+        const val FULL_DETAILING = "Complete vehicle detailing service."
 
-        // Technology & Digital
-        const val COMPUTER_REPAIR = "Fixing computer hardware and software issues."
-        const val PHONE_TABLET_REPAIR = "Repairing smartphones and tablets."
-        const val SMART_HOME_SETUP = "Installing smart home devices."
-        const val SECURITY_SYSTEM_INSTALLATION = "Setting up home and office security systems."
+        // Tires
+        const val TIRE_REPLACEMENT = "New tire fitting and rotation."
+        const val PUNCTURE_REPAIR = "Tire puncture repairs."
+        const val WHEEL_BALANCING = "Precision wheel balancing service."
 
-        // Business & Professional
-        const val ACCOUNTING_BOOKKEEPING = "Managing financial records and taxes."
-        const val LEGAL_CONSULTATION = "Providing legal advice and services."
-        const val GRAPHIC_DESIGN = "Creating visual designs for branding or marketing."
-        const val CONTENT_WRITING = "Writing articles, blogs, or web content."
-
-        // Transportation & Delivery
-        const val MOVING_SERVICES = "Helping with home or office relocation."
-        const val DELIVERY_SERVICES = "Delivering goods to customers."
-        const val RIDE_SERVICES = "Providing transportation for passengers."
-        const val FURNITURE_ASSEMBLY = "Putting together furniture at customer location."
+        // Emergency
+        const val TOWING_SERVICE = "Vehicle towing assistance."
+        const val JUMP_START = "On-site battery jump start."
+        const val ROADSIDE_ASSISTANCE = "Emergency roadside assistance."
+        const val MOBILE_MECHANIC = "Mechanic dispatched to your location."
     }
 
     // Location & Search

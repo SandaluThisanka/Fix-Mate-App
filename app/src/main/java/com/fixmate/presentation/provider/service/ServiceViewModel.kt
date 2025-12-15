@@ -212,33 +212,66 @@ class ServiceViewModel @Inject constructor(
     private fun loadInitialData() {
         val initialCategories = listOf(
             ServiceCategory(
-                name = "Home Services",
+                name = "Mechanical",
                 services = listOf(
-                    Service(1, "Plumbing", "Fixing and installing water systems like pipes and faucets.", PricingModel.HOURLY),
-                    Service(2, "Cleaning (Residential)", "General home cleaning services.", PricingModel.DAILY_FIXED),
-                    Service(3, "Painting & Decorating", "Interior and exterior painting, wall design.", PricingModel.PER_SQ_FT),
-                    Service(4, "Appliance Repair", "Repairing home appliances like refrigerators, washing machines.", PricingModel.FIXED)
+                    Service(1, "General Service", "Routine vehicle servicing and maintenance.", PricingModel.FIXED),
+                    Service(2, "Engine Repair", "Engine diagnosis and repair.", PricingModel.FIXED),
+                    Service(3, "Gearbox & Clutch", "Transmission and clutch repair.", PricingModel.FIXED),
+                    Service(4, "Fuel System Repair", "Fuel pump and injector repair.", PricingModel.FIXED)
                 )
             ),
             ServiceCategory(
-                name = "Education & Tutoring",
+                name = "Electrical",
                 services = listOf(
-                    Service(5, "Math Tutoring", "Helping students understand and solve math problems.", PricingModel.HOURLY),
-                    Service(6, "Music Lessons", "Teaching instruments or vocals.", PricingModel.HOURLY),
-                    Service(7, "Test Prep (SAT, ACT, etc.)", "Guiding students in preparation for exams.", PricingModel.HOURLY),
-                    Service(8, "Academic Writing Help", "Assisting with essays and academic papers.", PricingModel.FIXED)
+                    Service(5, "Auto Electrical Repair", "Electrical system fault repairs.", PricingModel.FIXED),
+                    Service(6, "Battery Replacement", "Battery testing and replacement.", PricingModel.FIXED),
+                    Service(7, "ECU Scanning", "Computer-based diagnostics for vehicle faults.", PricingModel.FIXED),
+                    Service(8, "Lighting & Wiring", "Lighting and wiring issue repairs.", PricingModel.FIXED)
                 )
             ),
             ServiceCategory(
-                name = "Personal Care & Wellness",
+                name = "Suspension",
                 services = listOf(
-                    Service(9, "Hair Styling & Cutting", "Haircuts and styling for men, women, and children.", PricingModel.FIXED),
-                    Service(10, "Massage Therapy", "Relaxation and therapeutic massages.", PricingModel.HOURLY),
-                    Service(11, "Personal Training", "Fitness training and workout guidance.", PricingModel.HOURLY),
-                    Service(12, "Child Care/Babysitting", "Looking after children at home.", PricingModel.DAILY_FIXED)
+                    Service(9, "Suspension Repair", "Suspension system inspections and repairs.", PricingModel.FIXED),
+                    Service(10, "Shock Absorbers", "Shock absorber replacement services.", PricingModel.FIXED),
+                    Service(11, "Steering Repair", "Power steering maintenance and repairs.", PricingModel.FIXED),
+                    Service(12, "Wheel Alignment", "Wheel alignment and balancing services.", PricingModel.FIXED)
                 )
             ),
-            // Add other categories here...
+            ServiceCategory(
+                name = "Brakes",
+                services = listOf(
+                    Service(13, "Brake Repair", "Brake system inspection and repairs.", PricingModel.FIXED),
+                    Service(14, "ABS Repair", "ABS system diagnostics and repairs.", PricingModel.FIXED),
+                    Service(15, "Brake Pads & Discs", "Brake pad and disc replacement.", PricingModel.FIXED)
+                )
+            ),
+            ServiceCategory(
+                name = "Body & Care",
+                services = listOf(
+                    Service(16, "Body Painting", "Vehicle body painting and touch-ups.", PricingModel.FIXED),
+                    Service(17, "Denting & Welding", "Accident dent repair and welding.", PricingModel.FIXED),
+                    Service(18, "Interior Cleaning", "Interior detailing and cleaning.", PricingModel.FIXED),
+                    Service(19, "Full Detailing", "Complete vehicle detailing service.", PricingModel.FIXED)
+                )
+            ),
+            ServiceCategory(
+                name = "Tires",
+                services = listOf(
+                    Service(20, "Tire Replacement", "New tire fitting and rotation.", PricingModel.FIXED),
+                    Service(21, "Puncture Repair", "Tire puncture repairs.", PricingModel.FIXED),
+                    Service(22, "Wheel Balancing", "Precision wheel balancing service.", PricingModel.FIXED)
+                )
+            ),
+            ServiceCategory(
+                name = "Emergency",
+                services = listOf(
+                    Service(23, "Towing Service", "Vehicle towing assistance.", PricingModel.FIXED),
+                    Service(24, "Jump Start", "On-site battery jump start.", PricingModel.FIXED),
+                    Service(25, "Roadside Assistance", "Emergency roadside assistance.", PricingModel.FIXED),
+                    Service(26, "Mobile Mechanic", "Mechanic dispatched to your location.", PricingModel.HOURLY)
+                )
+            )
         )
         _uiState.value = ServiceUiState(serviceCategories = initialCategories)
     }

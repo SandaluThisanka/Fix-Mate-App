@@ -24,9 +24,13 @@ class ServiceProviderRepository @Inject constructor(
 
     private fun getServiceType(service: Service?): ServiceType {
         return when (service?.name?.uppercase()) {
-            "PLUMBING" -> ServiceType.PLUMBING
-            "ELECTRICAL" -> ServiceType.ELECTRICAL
-            "CLEANING", "CLEANING (RESIDENTIAL)" -> ServiceType.CLEANING
+            "MECHANICAL", "ENGINE REPAIR", "OIL CHANGE" -> ServiceType.MECHANICAL
+            "ELECTRICAL", "BATTERY", "ALTERNATOR" -> ServiceType.ELECTRICAL
+            "SUSPENSION", "SHOCK ABSORBERS" -> ServiceType.SUSPENSION
+            "BRAKES", "BRAKE SERVICE", "BRAKE PAD REPLACEMENT" -> ServiceType.BRAKES
+            "BODY & CARE", "CAR WASH", "DETAILING" -> ServiceType.BODY_CARE
+            "TIRES", "TIRE ROTATION", "WHEEL ALIGNMENT" -> ServiceType.TIRES
+            "EMERGENCY", "TOWING", "ROADSIDE ASSISTANCE" -> ServiceType.EMERGENCY
             else -> ServiceType.ALL
         }
     }
@@ -111,9 +115,13 @@ class ServiceProviderRepository @Inject constructor(
 
     private fun getServiceTypeFromName(serviceName: String?): ServiceType {
         return when (serviceName?.uppercase()) {
-            "PLUMBING" -> ServiceType.PLUMBING
-            "ELECTRICAL", "ELECTRICAL REPAIR" -> ServiceType.ELECTRICAL
-            "CLEANING", "CLEANING (RESIDENTIAL)" -> ServiceType.CLEANING
+            "MECHANICAL", "ENGINE REPAIR", "OIL CHANGE" -> ServiceType.MECHANICAL
+            "ELECTRICAL", "BATTERY", "ALTERNATOR" -> ServiceType.ELECTRICAL
+            "SUSPENSION", "SHOCK ABSORBERS" -> ServiceType.SUSPENSION
+            "BRAKES", "BRAKE SERVICE", "BRAKE PAD REPLACEMENT" -> ServiceType.BRAKES
+            "BODY & CARE", "CAR WASH", "DETAILING" -> ServiceType.BODY_CARE
+            "TIRES", "TIRE ROTATION", "WHEEL ALIGNMENT" -> ServiceType.TIRES
+            "EMERGENCY", "TOWING", "ROADSIDE ASSISTANCE" -> ServiceType.EMERGENCY
             else -> {
                 Timber.d("Unknown service type: $serviceName")
                 ServiceType.ALL

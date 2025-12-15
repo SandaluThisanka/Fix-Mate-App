@@ -19,6 +19,7 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -138,6 +139,9 @@ dependencies {
 
     // Timber (logging)
     implementation("com.jakewharton.timber:timber:5.0.1")
+
+    // MultiDex support
+    implementation("androidx.multidex:multidex:2.0.1")
 
     // AndroidX extras
     implementation(libs.androidx.credentials)

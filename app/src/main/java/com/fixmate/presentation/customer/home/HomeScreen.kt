@@ -86,14 +86,14 @@ fun HomeScreen(
         }
     }
 
-    // Sample data with only confirmed available Material Icons
+    // FixMate Automotive Services
     val popularServices = listOf(
-        ServiceItem("Plumbing", Icons.Default.Build, Color(0xFF6366F1), com.fixmate.presentation.components.map.ServiceType.PLUMBING),
-        ServiceItem("Electrical", Icons.Default.Settings, Color(0xFFF59E0B), com.fixmate.presentation.components.map.ServiceType.ELECTRICAL),
-        ServiceItem("Cleaning", Icons.Default.Home, Color(0xFF10B981), com.fixmate.presentation.components.map.ServiceType.CLEANING),
-        ServiceItem("Auto Repair", Icons.Default.Build, Color(0xFFEF4444), com.fixmate.presentation.components.map.ServiceType.ALL),
-        ServiceItem("Tutoring", Icons.Default.Person, Color(0xFF8B5CF6), com.fixmate.presentation.components.map.ServiceType.ALL),
-        ServiceItem("Beauty", Icons.Default.Face, Color(0xFFEC4899), com.fixmate.presentation.components.map.ServiceType.ALL)
+        ServiceItem("Engine Repair", Icons.Default.Build, Color(0xFFEF4444), com.fixmate.presentation.components.map.ServiceType.MECHANICAL),
+        ServiceItem("Oil Change", Icons.Default.Settings, Color(0xFF3B82F6), com.fixmate.presentation.components.map.ServiceType.MECHANICAL),
+        ServiceItem("Battery", Icons.Default.Settings, Color(0xFFF59E0B), com.fixmate.presentation.components.map.ServiceType.ELECTRICAL),
+        ServiceItem("Brake Service", Icons.Default.Warning, Color(0xFF8B5CF6), com.fixmate.presentation.components.map.ServiceType.BRAKES),
+        ServiceItem("Car Wash", Icons.Default.Star, Color(0xFF10B981), com.fixmate.presentation.components.map.ServiceType.BODY_CARE),
+        ServiceItem("Towing", Icons.Default.Call, Color(0xFFEC4899), com.fixmate.presentation.components.map.ServiceType.EMERGENCY)
     )
 
     val context = LocalContext.current
@@ -568,8 +568,8 @@ fun HomeScreenPreview() {
     val sampleProviders = listOf(
         ServiceProvider(
             id = "1",
-            name = "Mike's Plumbing",
-            type = ServiceType.PLUMBING,
+            name = "Mike's Auto Repair",
+            type = ServiceType.MECHANICAL,
             latitude = 6.0367, // Example: Weligama, Sri Lanka
             longitude = 80.2170,
             rating = 4.8f,
@@ -577,7 +577,7 @@ fun HomeScreenPreview() {
         ),
         ServiceProvider(
             id = "2",
-            name = "Sarah Electronics",
+            name = "Quick Battery Service",
             type = ServiceType.ELECTRICAL,
             latitude = 0.0,
             longitude = 0.0,

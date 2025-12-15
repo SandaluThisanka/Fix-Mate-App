@@ -49,9 +49,13 @@ data class ServiceProvider(
 
 enum class ServiceType(val displayName: String, val icon: ImageVector, val color: Color) {
     ALL("All", Icons.Default.AccountBox, Color(0xFFFFC107)),
-    PLUMBING("Plumbing", Icons.Default.Build, Color(0xFF2196F3)),
-    ELECTRICAL("Electrical", Icons.Default.Add, Color(0xFF4CAF50)),
-    CLEANING("Cleaning", Icons.Default.Call, Color(0xFF9C27B0))
+    MECHANICAL("Mechanical", Icons.Default.Build, Color(0xFFEF4444)),
+    ELECTRICAL("Electrical", Icons.Default.Settings, Color(0xFFF59E0B)),
+    SUSPENSION("Suspension", Icons.Default.Build, Color(0xFF3B82F6)),
+    BRAKES("Brakes", Icons.Default.Warning, Color(0xFF8B5CF6)),
+    BODY_CARE("Body & Care", Icons.Default.Star, Color(0xFF10B981)),
+    TIRES("Tires", Icons.Default.Build, Color(0xFF6366F1)),
+    EMERGENCY("Emergency", Icons.Default.Call, Color(0xFFEC4899))
 }
 
 @Composable
@@ -130,9 +134,13 @@ fun MapService(
                     })",
                     icon = BitmapDescriptorFactory.fromResource(
                         when (provider.type) {
-                            ServiceType.PLUMBING -> R.drawable.map4_24
+                            ServiceType.MECHANICAL -> R.drawable.map4_24
                             ServiceType.ELECTRICAL -> R.drawable.map3_24
-                            ServiceType.CLEANING -> R.drawable.map1_24
+                            ServiceType.SUSPENSION -> R.drawable.map2_24
+                            ServiceType.BRAKES -> R.drawable.map1_24
+                            ServiceType.BODY_CARE -> R.drawable.map1_24
+                            ServiceType.TIRES -> R.drawable.map2_24
+                            ServiceType.EMERGENCY -> R.drawable.map4_24
                             ServiceType.ALL -> R.drawable.map2_24
                         }
                     ),
