@@ -109,6 +109,8 @@ class JobsViewModel @Inject constructor(
                     return@launch
                 }
                 
+                Timber.d("Loading bookings for provider ID: $currentUserId")
+                
                 // Fetch bookings for the current provider
                 val result = bookingRepository.getBookingsByProviderId(currentUserId)
                 

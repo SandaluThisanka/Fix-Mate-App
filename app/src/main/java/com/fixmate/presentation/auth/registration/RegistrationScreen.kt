@@ -417,7 +417,7 @@ fun Step3AlmostThere(
 ) {
     Column{
         Text(
-            "How will you primarily use SevaLK?",
+            "How will you primarily use FixMate?",
             fontWeight = FontWeight.Medium,
             color = S_LIGHT_TEXT,
             fontSize = 16.sp,

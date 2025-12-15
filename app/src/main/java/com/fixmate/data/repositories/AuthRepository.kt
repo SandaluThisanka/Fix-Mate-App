@@ -383,19 +383,33 @@ class AuthRepositoryImpl @Inject constructor(
 
             val document = userRef.get().await()
 
-            if (document.exists()) {
-                val updates = mapOf(
-                    "providerProfile.services" to services.map { Service.toMap(it) },
-                    "providerProfile.updatedAt" to System.currentTimeMillis(),
-                    "updatedAt" to System.currentTimeMillis()
-                )
-
-                userRef.update(updates).await()
-                Timber.d("Provider services updated successfully for provider: $providerId")
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Provider profile not found"))
+            if (!document.exists()) {
+                return Result.failure(Exception("Provider profile not found"))
             }
+
+            val updates = mapOf(
+                "providerProfile.services" to services.map { Service.toMap(it) },
+                "providerProfile.updatedAt" to System.currentTimeMillis(),
+                "updatedAt" to System.currentTimeMillis()
+            )
+
+            userRef.update(updates).await()
+            Timber.d("Provider services updated successfully for provider: $providerId")
+
+            // Keep service_providers collection in sync (used by map/search)
+            val providerRef = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+                .document(providerId)
+            providerRef.set(
+                mapOf(
+                    "id" to providerId,
+                    "userId" to providerId,
+                    "services" to services.map { Service.toMap(it) },
+                    "updatedAt" to System.currentTimeMillis()
+                ),
+                SetOptions.merge()
+            ).await()
+
+            Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to update service provider services")
             Result.failure(e)
@@ -415,20 +429,35 @@ class AuthRepositoryImpl @Inject constructor(
 
             val intRadius = serviceRadius.toInt()
             
-            if (document.exists()) {
-                val updates = mapOf(
-                    "providerProfile.serviceLocation" to ServiceLocation.toMap(serviceLocation),
-                    "providerProfile.serviceRadius" to intRadius,
-                    "providerProfile.updatedAt" to System.currentTimeMillis(),
-                    "updatedAt" to System.currentTimeMillis()
-                )
-                
-                userRef.update(updates).await()
-                Timber.d("Provider location updated successfully for provider: $providerId")
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Provider profile not found"))
+            if (!document.exists()) {
+                return Result.failure(Exception("Provider profile not found"))
             }
+
+            val updates = mapOf(
+                "providerProfile.serviceLocation" to ServiceLocation.toMap(serviceLocation),
+                "providerProfile.serviceRadius" to intRadius,
+                "providerProfile.updatedAt" to System.currentTimeMillis(),
+                "updatedAt" to System.currentTimeMillis()
+            )
+            
+            userRef.update(updates).await()
+            Timber.d("Provider location updated successfully for provider: $providerId")
+
+            // Keep service_providers collection in sync (used by map/search)
+            val providerRef = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+                .document(providerId)
+            providerRef.set(
+                mapOf(
+                    "id" to providerId,
+                    "userId" to providerId,
+                    "serviceLocation" to ServiceLocation.toMap(serviceLocation),
+                    "serviceRadius" to intRadius,
+                    "updatedAt" to System.currentTimeMillis()
+                ),
+                SetOptions.merge()
+            ).await()
+
+            Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to update service provider location")
             Result.failure(e)

@@ -49,10 +49,14 @@ class BookingRepositoryImpl @Inject constructor(
             
             val bookingData = bookingToMap(bookingWithId)
             
+            Timber.d("Creating booking document $bookingId for providerId: ${booking.providerId}, providerName: ${booking.providerName}, customer: ${booking.customerId}")
+            
             firestore.collection(Constants.COLLECTION_BOOKINGS)
                 .document(bookingId)
                 .set(bookingData)
                 .await()
+            
+            Timber.d("Booking document created successfully in Firestore")
             
             // Send notification to service provider
             try {
@@ -207,10 +211,14 @@ class BookingRepositoryImpl @Inject constructor(
     
     override suspend fun getBookingsByProviderId(providerId: String): Result<List<Booking>> {
         return try {
+            Timber.d("Querying bookings for providerId: $providerId")
+            
             val querySnapshot = firestore.collection(Constants.COLLECTION_BOOKINGS)
                 .whereEqualTo("providerId", providerId)
                 .get()
                 .await()
+            
+            Timber.d("Found ${querySnapshot.documents.size} booking documents for provider $providerId")
             
             val bookings = querySnapshot.documents.mapNotNull { document ->
                 document.data?.let { data ->

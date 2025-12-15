@@ -39,7 +39,11 @@ class BookingViewModel @Inject constructor(
     private val _bookingCreated = MutableStateFlow<String?>(null)
     val bookingCreated: StateFlow<String?> = _bookingCreated.asStateFlow()
     
+    // Store the provider ID to use when creating booking
+    private var loadedProviderId: String? = null
+    
     fun loadServiceProvider(providerId: String) {
+        loadedProviderId = providerId
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -48,7 +52,7 @@ class BookingViewModel @Inject constructor(
                 val provider = serviceProviderRepository.getServiceProviderById(providerId)
                 if (provider != null) {
                     _serviceProvider.value = provider
-                    Timber.d("Provider loaded successfully: ${provider.businessName}")
+                    Timber.d("Provider loaded successfully: ${provider.businessName}, ID: ${provider.id}, UserID: ${provider.userId}")
                 } else {
                     _error.value = "Provider not found"
                     Timber.w("Provider not found for ID: $providerId")
@@ -130,11 +134,19 @@ class BookingViewModel @Inject constructor(
 
                 val customerName = authRepository.getCustomerName() ?: "Unknown Customer"
                 
+                // Use the original providerId parameter as it comes from the service_providers document ID
+                // which is the provider's auth UID. Don't use provider.id or provider.userId from the nested
+                // providerProfile as they may be inconsistent.
+                val bookingProviderId = loadedProviderId ?: provider.userId.takeIf { it.isNotBlank() } ?: provider.id
+                val providerBusinessName = provider.businessName.ifBlank { "Service Provider" }
+                
+                Timber.d("Creating booking with providerId: $bookingProviderId, providerName: $providerBusinessName")
+
                 // Create booking object
                 val booking = Booking(
                     customerId = currentUserId,
-                    providerId = provider.id,
-                    providerName = provider.businessName, // Add provider business name
+                    providerId = bookingProviderId,
+                    providerName = providerBusinessName,
                     serviceId = selectedServiceObj.id.toString(),
                     customerName = customerName,
                     serviceName = selectedService,
