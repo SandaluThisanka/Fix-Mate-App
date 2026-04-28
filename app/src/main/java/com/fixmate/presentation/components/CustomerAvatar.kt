@@ -119,7 +119,7 @@ fun CustomerAvatar(
                     contentScale = ContentScale.Crop
                 )
             }
-            else -> {
+             else -> {
                 // Show default avatar icon when no profile image
                 Icon(
                     imageVector = Icons.Default.Person,
