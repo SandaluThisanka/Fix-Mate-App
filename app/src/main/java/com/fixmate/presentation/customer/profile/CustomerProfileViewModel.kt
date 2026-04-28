@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.fixmate.data.repositories.ImageRepository
+import com.fixmate.presentation.auth.AuthStateManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,8 @@ import javax.inject.Inject
 class CustomerProfileViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    private val imageRepository: ImageRepository
+    private val imageRepository: ImageRepository,
+    private val authStateManager: AuthStateManager
 ) : ViewModel() {
 
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
@@ -29,8 +31,16 @@ class CustomerProfileViewModel @Inject constructor(
     private val _isUploadingImage = MutableStateFlow(false)
     val isUploadingImage: StateFlow<Boolean> = _isUploadingImage
 
+    // New state for provider account status
+    private val _hasProviderAccount = MutableStateFlow(false)
+    val hasProviderAccount: StateFlow<Boolean> = _hasProviderAccount
+
+    private val _isCheckingProviderAccount = MutableStateFlow(false)
+    val isCheckingProviderAccount: StateFlow<Boolean> = _isCheckingProviderAccount
+
     init {
         loadUserProfile()
+        checkProviderAccountStatus()
     }
 
     private fun loadUserProfile() {
@@ -62,24 +72,87 @@ class CustomerProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Check if the current customer has a provider account registered
+     */
+    private fun checkProviderAccountStatus() {
+        _isCheckingProviderAccount.value = true
+        viewModelScope.launch {
+            try {
+                val hasProvider = authStateManager.hasProviderAccount()
+                _hasProviderAccount.value = hasProvider
+                Log.d("CustomerProfileVM", "Provider account status checked: $hasProvider")
+            } catch (e: Exception) {
+                Log.e("CustomerProfileVM", "Error checking provider account status", e)
+                _hasProviderAccount.value = false
+            } finally {
+                _isCheckingProviderAccount.value = false
+            }
+        }
+    }
+
+    /**
+     * Update the customer profile name and phone number
+     * NAME is shared across both profiles (same person)
+     * Phone number is customer-specific
+     * This syncs the name to the provider profile if it exists
+     */
     fun updateUserProfile(name: String, phoneNumber: String) {
         val currentUser = auth.currentUser ?: return
 
         viewModelScope.launch {
             try {
-                val updates = mapOf(
+                val now = System.currentTimeMillis()
+
+                // Update customer profile in 'users' collection
+                // displayName is the shared source of truth for the person's name
+                val customerUpdates = mapOf(
                     "displayName" to name,
                     "phoneNumber" to phoneNumber,
-                    "updatedAt" to System.currentTimeMillis()
+                    "updatedAt" to now
                 )
 
                 firestore.collection("users").document(currentUser.uid)
-                    .update(updates)
+                    .update(customerUpdates)
                     .await()
+
+                Log.d("CustomerProfileVM", "Customer profile updated with name: $name")
+
+                // IMPORTANT: Also sync the displayName to provider profile if it exists
+                // This ensures the same person's name is reflected in both roles
+                try {
+                    firestore.collection("service_providers").document(currentUser.uid)
+                        .update("displayName", name, "updatedAt", now)
+                        .await()
+                    Log.d("CustomerProfileVM", "Provider profile synced with new name: $name")
+                } catch (e: Exception) {
+                    // Provider profile might not exist, which is fine
+                    Log.d("CustomerProfileVM", "Provider profile not found or update skipped: ${e.message}")
+                }
 
                 loadUserProfile() // Reload profile after update
             } catch (e: Exception) {
-                Log.e("ProfileVM", "Error updating profile", e)
+                Log.e("CustomerProfileVM", "Error updating customer profile", e)
+            }
+        }
+    }
+
+    /**
+     * Switch to provider mode if a provider account exists
+     * If no provider account exists, the UI should redirect to provider registration
+     */
+    fun switchToProvider() {
+        viewModelScope.launch {
+            try {
+                if (authStateManager.hasProviderAccount()) {
+                    authStateManager.switchToProvider()
+                    Log.d("CustomerProfileVM", "Switched to provider mode")
+                } else {
+                    // No provider account - UI should handle navigation to provider registration
+                    Log.d("CustomerProfileVM", "No provider account - should redirect to registration")
+                }
+            } catch (e: Exception) {
+                Log.e("CustomerProfileVM", "Error switching to provider", e)
             }
         }
     }
@@ -114,7 +187,7 @@ class CustomerProfileViewModel @Inject constructor(
                 result.onSuccess { imageUrl ->
                     android.util.Log.d("ProfileVMDebug", "ImageRepository returned imageUrl=$imageUrl")
                     try {
-                        // Update Firestore with new profile image URL
+                        // Update Firestore with new profile image URL - ONLY the customer profile
                         firestore.collection("users").document(currentUser.uid)
                             .update("profileImageUrl", imageUrl)
                             .await()

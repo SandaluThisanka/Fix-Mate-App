@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.fixmate.data.models.ServiceProvider
 import com.fixmate.data.repositories.ImageRepository
+import com.fixmate.presentation.auth.AuthStateManager
 import com.fixmate.utils.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,8 @@ import java.util.*
 class ProviderProfileViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val imageRepository: ImageRepository
+    private val imageRepository: ImageRepository,
+    private val authStateManager: AuthStateManager
 ) : ViewModel() {
     
     private val _providerProfile = MutableStateFlow<ProviderProfile?>(null)
@@ -42,13 +44,13 @@ class ProviderProfileViewModel @Inject constructor(
             try {
                 Log.d("ProviderProfileVM", "Loading profile for user: ${currentUser.uid}")
                 
-                // Load user document
+                // Load user document (contains shared displayName)
                 val userDoc = firestore.collection(Constants.COLLECTION_USERS)
                     .document(currentUser.uid)
                     .get()
                     .await()
 
-                // Load provider document
+                // Load provider document (contains provider-specific data + mirrored displayName)
                 val providerDoc = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
                     .document(currentUser.uid)
                     .get()
@@ -57,6 +59,7 @@ class ProviderProfileViewModel @Inject constructor(
                 if (!providerDoc.exists()) {
                     Log.e("ProviderProfileVM", "Provider document missing for user ${currentUser.uid}")
                     // Create default profile to avoid blank screen
+                    // Use displayName from users collection (the shared, actual person's name)
                     _providerProfile.value = ProviderProfile(
                         name = userDoc.getString("displayName") ?: "Provider",
                         memberSince = formatDate(System.currentTimeMillis()),
@@ -89,8 +92,14 @@ class ProviderProfileViewModel @Inject constructor(
                     else -> "Location not set"
                 }
 
+                // Use displayName (the shared actual name) - fall back to businessName for backward compatibility
+                // displayName is synced across both customer and provider profiles
+                val displayName = providerDoc.getString("displayName") 
+                    ?: userDoc.getString("displayName") 
+                    ?: provider.businessName.ifBlank { "Provider" }
+
                 _providerProfile.value = ProviderProfile(
-                    name = provider.businessName.ifBlank { userDoc.getString("displayName") ?: "Provider" },
+                    name = displayName,
                     memberSince = formatDate(provider.createdAt),
                     completedJobs = provider.completedJobs,
                     totalJobs = provider.totalJobs,
@@ -124,6 +133,12 @@ class ProviderProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Update provider profile information
+     * IMPORTANT: displayName is SHARED across both profiles (represents the same person)
+     * When updating the name, it will be synced to the customer profile as well
+     * Other fields like businessName and phone are provider-specific
+     */
     fun updateProviderProfile(name: String, phoneNumber: String) {
         val currentUser = auth.currentUser ?: return
 
@@ -131,29 +146,36 @@ class ProviderProfileViewModel @Inject constructor(
             try {
                 val now = System.currentTimeMillis()
 
+                // Update phone number in users collection (customer-specific)
                 firestore.collection(Constants.COLLECTION_USERS)
                     .document(currentUser.uid)
                     .update(
                         mapOf(
+                            "displayName" to name,  // Sync the shared name
                             "phoneNumber" to phoneNumber,
                             "updatedAt" to now
                         )
                     )
                     .await()
 
+                // Update provider-specific fields in service_providers collection
+                // displayName is mirrored here for consistency
                 firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
                     .document(currentUser.uid)
                     .update(
                         mapOf(
-                            "businessName" to name,
+                            "displayName" to name,  // Sync the shared name
+                            "businessName" to name,  // Keep business name updated too
+                            "phoneNumber" to phoneNumber,
                             "updatedAt" to now
                         )
                     )
                     .await()
 
+                Log.d("ProviderProfileVM", "Provider profile updated with name: $name (synced to customer profile)")
                 loadProviderProfile() // Reload profile after update
             } catch (e: Exception) {
-                Log.e("ProviderProfileVM", "Error updating profile", e)
+                Log.e("ProviderProfileVM", "Error updating provider profile", e)
             }
         }
     }
@@ -255,6 +277,25 @@ class ProviderProfileViewModel @Inject constructor(
                 loadProviderProfile() // Reload profile after update
             } catch (e: Exception) {
                 Log.e("ProviderProfileVM", "Failed to update availability", e)
+            }
+        }
+    }
+
+    /**
+     * Switch to customer mode
+     * Only available when the user is currently in provider mode
+     */
+    fun switchToCustomer() {
+        viewModelScope.launch {
+            try {
+                if (authStateManager.canSwitchToCustomer()) {
+                    authStateManager.switchToCustomer()
+                    Log.d("ProviderProfileVM", "Switched to customer mode")
+                } else {
+                    Log.w("ProviderProfileVM", "Cannot switch to customer mode - not currently in provider mode")
+                }
+            } catch (e: Exception) {
+                Log.e("ProviderProfileVM", "Error switching to customer", e)
             }
         }
     }

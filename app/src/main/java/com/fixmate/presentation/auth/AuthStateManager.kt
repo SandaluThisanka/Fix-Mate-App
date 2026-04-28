@@ -267,4 +267,86 @@ class AuthStateManager @Inject constructor(
             isProviderMode = false // Default for new users
         }
     }
+
+    /**
+     * Check if the current user has a provider account registered
+     */
+    suspend fun hasProviderAccount(): Boolean {
+        return try {
+            val user = firebaseAuth.currentUser ?: return false
+            val providerDoc = firestore.collection(Constants.COLLECTION_SERVICE_PROVIDERS)
+                .document(user.uid)
+                .get()
+                .await()
+            providerDoc.exists().also { exists ->
+                Timber.d("Provider account exists: $exists for user ${user.uid}")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error checking provider account existence")
+            false
+        }
+    }
+
+    /**
+     * Check if the current user has a customer account (should always be true if authenticated)
+     */
+    suspend fun hasCustomerAccount(): Boolean {
+        return try {
+            val user = firebaseAuth.currentUser ?: return false
+            val userDoc = firestore.collection(Constants.COLLECTION_USERS)
+                .document(user.uid)
+                .get()
+                .await()
+            userDoc.exists().also { exists ->
+                Timber.d("Customer account exists: $exists for user ${user.uid}")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error checking customer account existence")
+            false
+        }
+    }
+
+    /**
+     * Switch to provider mode
+     * Only works if the user has an existing provider account
+     */
+    fun switchToProvider() {
+        if (!isProviderMode) {
+            isProviderMode = true
+            Timber.d("Switched to provider mode")
+        }
+    }
+
+    /**
+     * Switch to customer mode
+     */
+    fun switchToCustomer() {
+        if (isProviderMode) {
+            isProviderMode = false
+            Timber.d("Switched to customer mode")
+        }
+    }
+
+    /**
+     * Check if the current user can switch to provider
+     * Returns true if they have a provider account OR if they're in customer mode
+     * (in customer mode, they can initiate provider registration)
+     */
+    suspend fun canSwitchToProvider(): Boolean {
+        return try {
+            if (isProviderMode) return true // Already a provider
+            hasProviderAccount() // Check if provider account exists
+        } catch (e: Exception) {
+            Timber.e(e, "Error checking if can switch to provider")
+            false
+        }
+    }
+
+    /**
+     * Check if the current user can switch to customer
+     * Only true if the user is currently in provider mode
+     */
+    fun canSwitchToCustomer(): Boolean {
+        return isProviderMode
+    }
 }

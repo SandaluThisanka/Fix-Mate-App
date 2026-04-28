@@ -25,7 +25,9 @@ fun CustomerAvatar(
     size: Dp = 40.dp,
     modifier: Modifier = Modifier
 ) {
-    var customerProfileImageUrl by remember { mutableStateOf<String?>(null) }
+    var avatarImageUrl by remember { mutableStateOf<String?>(null) }
+    var userProfileImageUrl by remember { mutableStateOf<String?>(null) }
+    var providerProfileImageUrl by remember { mutableStateOf<String?>(null) }
     var isLoadingImage by remember { mutableStateOf(false) }
 
     DisposableEffect(customerId, isProvider) {
@@ -33,31 +35,55 @@ fun CustomerAvatar(
         isLoadingImage = true
 
         if (customerId.isNotEmpty()) {
-            val registration = firestore.collection("users")
+            val userListener = firestore.collection("users")
                 .document(customerId)
                 .addSnapshotListener { document, error ->
                     if (error != null) {
-                        customerProfileImageUrl = null
+                        avatarImageUrl = null
+                        userProfileImageUrl = null
                         isLoadingImage = false
                         return@addSnapshotListener
                     }
 
                     if (document != null && document.exists()) {
-                        customerProfileImageUrl = if (!isProvider) {
-                            document.getString("profileImageUrl")
-                        } else {
-                            val providerProfile = document.get("providerProfile") as? Map<String, Any>
-                            providerProfile?.get("profileImageUrl") as? String
-                        }
+                        userProfileImageUrl = document.getString("profileImageUrl")
+                        avatarImageUrl = userProfileImageUrl ?: providerProfileImageUrl
                     } else {
-                        customerProfileImageUrl = null
+                        userProfileImageUrl = null
+                        avatarImageUrl = providerProfileImageUrl
                     }
 
                     isLoadingImage = false
                 }
 
+            val providerListener = if (isProvider) {
+                firestore.collection("service_providers")
+                    .document(customerId)
+                    .addSnapshotListener { document, error ->
+                        if (error != null) {
+                            providerProfileImageUrl = null
+                            avatarImageUrl = userProfileImageUrl
+                            isLoadingImage = false
+                            return@addSnapshotListener
+                        }
+
+                        if (document != null && document.exists()) {
+                            providerProfileImageUrl = document.getString("profileImageUrl")
+                            avatarImageUrl = userProfileImageUrl ?: providerProfileImageUrl
+                        } else {
+                            providerProfileImageUrl = null
+                            avatarImageUrl = userProfileImageUrl
+                        }
+
+                        isLoadingImage = false
+                    }
+            } else {
+                null
+            }
+
             onDispose {
-                registration.remove()
+                userListener.remove()
+                providerListener?.remove()
             }
         } else {
             isLoadingImage = false
@@ -82,11 +108,11 @@ fun CustomerAvatar(
                     color = S_YELLOW
                 )
             }
-            !customerProfileImageUrl.isNullOrEmpty() -> {
-                // Show customer profile image
+            !avatarImageUrl.isNullOrEmpty() -> {
+                // Show the uploaded profile image from the user profile, with provider fallback
                 AsyncImage(
-                    model = customerProfileImageUrl,
-                    contentDescription = "Customer Profile Picture",
+                    model = avatarImageUrl,
+                    contentDescription = if (isProvider) "Provider Profile Picture" else "Customer Profile Picture",
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(CircleShape),
