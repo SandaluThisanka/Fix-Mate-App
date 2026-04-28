@@ -32,11 +32,14 @@ class ImageRepository @Inject constructor(
                 val fileName = "profile_${userId}_${UUID.randomUUID()}.jpg"
 
                 // Upload to Supabase
+                android.util.Log.d("ImageRepositoryDebug", "Uploading profile image file=$fileName to bucket=${SupabaseClient.PROFILE_IMAGES_BUCKET}")
                 val imageUrl = uploadToSupabase(imageBytes, fileName, SupabaseClient.PROFILE_IMAGES_BUCKET)
+                android.util.Log.d("ImageRepositoryDebug", "Upload finished, publicUrl=$imageUrl")
 
                 Result.success(imageUrl)
             } catch (e: Exception) {
                 Log.e("ImageRepository", "Error uploading image", e)
+                android.util.Log.e("ImageRepositoryDebug", "Error uploading profile image: ${e.message}", e)
                 Result.failure(e)
             }
         }
@@ -52,11 +55,14 @@ class ImageRepository @Inject constructor(
                 val fileName = "chat_${userId}_${UUID.randomUUID()}.jpg"
 
                 // Upload to Supabase
+                android.util.Log.d("ImageRepositoryDebug", "Uploading chat image file=$fileName to bucket=${SupabaseClient.CHAT_IMAGES_BUCKET}")
                 val imageUrl = uploadToSupabase(imageBytes, fileName, SupabaseClient.CHAT_IMAGES_BUCKET)
+                android.util.Log.d("ImageRepositoryDebug", "Chat upload finished, publicUrl=$imageUrl")
 
                 Result.success(imageUrl)
             } catch (e: Exception) {
                 Log.e("ImageRepository", "Error uploading chat image", e)
+                android.util.Log.e("ImageRepositoryDebug", "Error uploading chat image: ${e.message}", e)
                 Result.failure(e)
             }
         }
@@ -102,12 +108,18 @@ class ImageRepository @Inject constructor(
             val bucket = supabaseClient.client.storage.from(bucketName)
 
             // Upload the file
-            bucket.upload(fileName, imageBytes, upsert = true)
+            val uploadResult = try {
+                bucket.upload(fileName, imageBytes, upsert = true)
+            } catch (e: Exception) {
+                android.util.Log.e("ImageRepositoryDebug", "Supabase upload threw for file=$fileName bucket=$bucketName", e)
+                throw e
+            }
 
-            // Get the public URL
+            // Note: storage-kt client may return result metadata; still fetch public URL
             val publicUrl = bucket.publicUrl(fileName)
 
             Log.d("ImageRepository", "Successfully uploaded image: $publicUrl")
+            android.util.Log.d("ImageRepositoryDebug", "uploadResult=$uploadResult, publicUrl=$publicUrl, bucket=$bucketName, file=$fileName")
             return publicUrl
 
         } catch (e: Exception) {

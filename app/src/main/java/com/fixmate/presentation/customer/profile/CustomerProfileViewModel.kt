@@ -106,22 +106,34 @@ class CustomerProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _isUploadingImage.value = true
             try {
+                android.util.Log.d("ProfileVMDebug", "Starting uploadProfileImage for user=${currentUser.uid}, uri=$imageUri")
                 // Get current profile image URL to delete old image if exists
                 val currentProfile = _userProfile.value
                 val oldImageUrl = currentProfile?.profileImageUrl
-                
                 val result = imageRepository.uploadProfileImage(imageUri, currentUser.uid)
                 result.onSuccess { imageUrl ->
-                    // Update Firestore with new profile image URL
-                    firestore.collection("users").document(currentUser.uid)
-                        .update("profileImageUrl", imageUrl)
-                        .await()
+                    android.util.Log.d("ProfileVMDebug", "ImageRepository returned imageUrl=$imageUrl")
+                    try {
+                        // Update Firestore with new profile image URL
+                        firestore.collection("users").document(currentUser.uid)
+                            .update("profileImageUrl", imageUrl)
+                            .await()
+                        android.util.Log.d("ProfileVMDebug", "Firestore updated profileImageUrl for user=${currentUser.uid} with URL=$imageUrl")
+
+                        // Refresh the in-memory profile immediately so the UI updates without waiting for a refetch.
+                        _userProfile.value = _userProfile.value?.copy(profileImageUrl = imageUrl)
+                    } catch (e: Exception) {
+                        android.util.Log.e("ProfileVMDebug", "FAILED to update Firestore profileImageUrl: ${e.message}")
+                        throw e
+                    }
 
                     // Delete old image if it exists
                     oldImageUrl?.let { oldUrl ->
+                        android.util.Log.d("ProfileVMDebug", "Old profile image exists, oldUrl=$oldUrl")
                         try {
                             val fileName = extractFileNameFromUrl(oldUrl)
                             if (fileName.isNotEmpty()) {
+                                android.util.Log.d("ProfileVMDebug", "Deleting old profile image file=$fileName")
                                 imageRepository.deleteProfileImage(fileName)
                             }
                         } catch (e: Exception) {
@@ -129,13 +141,14 @@ class CustomerProfileViewModel @Inject constructor(
                         }
                     }
 
-                    loadUserProfile() // Reload profile to show new image
                     Log.d("ProfileVM", "Profile image uploaded successfully: $imageUrl")
                 }.onFailure { exception ->
                     Log.e("ProfileVM", "Error uploading profile image", exception)
+                    android.util.Log.e("ProfileVMDebug", "uploadProfileImage failed: ${exception.message}", exception)
                 }
             } catch (e: Exception) {
                 Log.e("ProfileVM", "Error uploading profile image", e)
+                android.util.Log.e("ProfileVMDebug", "uploadProfileImage outer exception: ${e.message}", e)
             } finally {
                 _isUploadingImage.value = false
             }

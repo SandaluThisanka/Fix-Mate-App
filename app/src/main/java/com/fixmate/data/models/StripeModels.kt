@@ -14,6 +14,8 @@ data class CreatePaymentIntentRequest(
     val customerId: String,
     @SerializedName("providerId")
     val providerId: String,
+    @SerializedName("metadata")
+    val metadata: Map<String, String> = emptyMap(),
     @SerializedName("paymentMethodTypes")
     val paymentMethodTypes: List<String> = listOf("card")
 )
@@ -24,7 +26,7 @@ data class CreatePaymentIntentResponse(
     @SerializedName("paymentIntentId")
     val paymentIntentId: String,
     @SerializedName("publishableKey")
-    val publishableKey: String
+    val publishableKey: String = ""
 )
 
 data class ConfirmPaymentRequest(

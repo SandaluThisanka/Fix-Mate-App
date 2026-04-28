@@ -1,6 +1,7 @@
 package com.fixmate.data.repositories
 
 import android.util.Log
+import com.fixmate.BuildConfig
 import com.google.firebase.firestore.FirebaseFirestore
 import com.fixmate.data.api.PaymentApiService
 import com.fixmate.data.models.*
@@ -50,8 +51,14 @@ class PaymentRepositoryImpl @Inject constructor(
             val request = CreatePaymentIntentRequest(
                 bookingId = bookingId,
                 amount = amount, // Send as Double, backend converts to paisa
+                currency = "lkr",
                 customerId = customerId,
-                providerId = providerId
+                providerId = providerId,
+                metadata = mapOf(
+                    "bookingId" to bookingId,
+                    "customerId" to customerId,
+                    "providerId" to providerId
+                )
             )
             
             Log.d("FIXMATE_PAYMENT", "========== BACKEND REQUEST ==========")
@@ -66,7 +73,7 @@ class PaymentRepositoryImpl @Inject constructor(
             Timber.d("Amount: LKR $amount (backend will convert to ${(amount * 100).toLong()} paisa)")
             Timber.d("Customer ID: $customerId")
             Timber.d("Provider ID: $providerId")
-            Timber.d("Backend URL: https://magnificent-fulfillment-firebaseserviceaccount.up.railway.app")
+            Timber.d("Backend URL: ${BuildConfig.API_BASE_URL}")
             Timber.d("=============================================")
             
             val response = paymentApiService.createPaymentIntent(request)
@@ -104,7 +111,7 @@ class PaymentRepositoryImpl @Inject constructor(
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: java.net.UnknownHostException) {
-            val errorMsg = "Cannot reach payment server. Please check:\n1. Internet connection is active\n2. Backend server is running at https://sevalk-payment-backend.onrender.com\n3. No firewall blocking the connection"
+            val errorMsg = "Cannot reach payment server. Please check:\n1. Internet connection is active\n2. Backend server is running at ${BuildConfig.API_BASE_URL}\n3. No firewall blocking the connection"
             Log.e("FIXMATE_PAYMENT", "❌ UnknownHostException: ${e.message}")
             Timber.e(e, "❌ UnknownHostException: $errorMsg")
             Result.failure(Exception(errorMsg))
@@ -114,7 +121,7 @@ class PaymentRepositoryImpl @Inject constructor(
             Timber.e(e, "❌ SocketTimeoutException: $errorMsg")
             Result.failure(Exception(errorMsg))
         } catch (e: java.net.ConnectException) {
-            val errorMsg = "Cannot connect to payment server.\nThe backend at https://sevalk-payment-backend.onrender.com may be offline or not deployed."
+            val errorMsg = "Cannot connect to payment server.\nThe backend at ${BuildConfig.API_BASE_URL} may be offline or not deployed."
             Log.e("FIXMATE_PAYMENT", "❌ ConnectException: ${e.message}")
             Timber.e(e, "❌ ConnectException: $errorMsg")
             Result.failure(Exception(errorMsg))

@@ -8,6 +8,32 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
 }
 
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun readConfig(name: String, defaultValue: String = ""): String {
+    val fromLocalProperties = localProperties.getProperty(name)?.trim()
+    val fromGradleProperty = providers.gradleProperty(name).orNull?.trim()
+    return when {
+        !fromLocalProperties.isNullOrEmpty() -> fromLocalProperties
+        !fromGradleProperty.isNullOrEmpty() -> fromGradleProperty
+        else -> defaultValue
+    }
+}
+
+val apiBaseUrl = readConfig(
+    name = "API_BASE_URL",
+    defaultValue = "https://magnificent-fulfillment-firebaseserviceaccount.up.railway.app"
+).removeSuffix("/") + "/"
+
+val stripePublishableKey = readConfig(name = "STRIPE_PUBLISHABLE_KEY")
+
 android {
     namespace = "com.fixmate"
     compileSdk = 35
@@ -20,6 +46,9 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
+
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
     buildTypes {

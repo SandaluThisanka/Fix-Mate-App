@@ -187,10 +187,14 @@ class ProviderProfileViewModel @Inject constructor(
                         .document(currentUser.uid)
                         .update(
                             mapOf(
+                                "profileImageUrl" to imageUrl,
                                 "updatedAt" to now
                             )
                         )
                         .await()
+
+                    // Refresh the in-memory profile immediately so the UI updates without waiting for a refetch
+                    _providerProfile.value = _providerProfile.value?.copy(profileImageUrl = imageUrl)
 
                     // Delete old image if it exists
                     oldImageUrl?.let { oldUrl ->
@@ -204,7 +208,6 @@ class ProviderProfileViewModel @Inject constructor(
                         }
                     }
 
-                    loadProviderProfile() // Reload profile to show new image
                     Log.d("ProviderProfileVM", "Profile image uploaded successfully: $imageUrl")
                 }.onFailure { exception ->
                     Log.e("ProviderProfileVM", "Error uploading profile image", exception)

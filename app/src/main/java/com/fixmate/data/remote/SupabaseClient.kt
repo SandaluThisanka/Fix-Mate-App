@@ -9,8 +9,8 @@ import javax.inject.Singleton
 class SupabaseClient @Inject constructor() {
     
     val client = createSupabaseClient(
-        supabaseUrl = "https://qirqsvnqewqmhtgiftcj.supabase.co", // Replace with your actual Supabase URL
-        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcnFzdm5xZXdxbWh0Z2lmdGNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxOTYyMjQsImV4cCI6MjA2ODc3MjIyNH0.TvTAa-2iDf4G91RgTNQNlVAAItZJN7lZiAlgVmUUJKc" // Replace with your actual Supabase anon key
+        supabaseUrl = "https://rhrhemmogrknrmopzffs.supabase.co", // Replace with your actual Supabase URL
+        supabaseKey = "sb_publishable_0tjPA8qSgnHhgW6GfTSIXg_8STblLcX" // Replace with your actual Supabase anon key
     ) {
         install(Storage)
     }

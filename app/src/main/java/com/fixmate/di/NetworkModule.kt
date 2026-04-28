@@ -1,5 +1,6 @@
 package com.fixmate.di
 
+import com.fixmate.BuildConfig
 import com.fixmate.data.api.PaymentApiService
 import com.fixmate.data.remote.SupabaseClient
 import dagger.Module
@@ -62,7 +63,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://magnificent-fulfillment-firebaseserviceaccount.up.railway.app/")
+            .baseUrl(BuildConfig.API_BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

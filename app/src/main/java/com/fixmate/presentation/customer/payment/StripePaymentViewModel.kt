@@ -3,6 +3,7 @@ package com.fixmate.presentation.customer.payment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fixmate.BuildConfig
 import com.fixmate.data.models.StripePaymentMethod
 import com.fixmate.data.repositories.BookingRepository
 import com.fixmate.data.repositories.PaymentRepository
@@ -144,7 +145,7 @@ class StripePaymentViewModel @Inject constructor(
                             isLoading = false,
                             clientSecret = response.clientSecret,
                             paymentIntentId = response.paymentIntentId,
-                            publishableKey = response.publishableKey,
+                            publishableKey = response.publishableKey.ifBlank { BuildConfig.STRIPE_PUBLISHABLE_KEY },
                             isPaymentIntentCreated = true
                         )
                         Timber.d("✅ Payment intent created - Ready for payment")
